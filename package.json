@@ -1,0 +1,30 @@
+{
+  "name": "@tkurki/um982",
+  "version": "0.0.1",
+  "description": "Signal K plugin for Unicore UM982 GNSS receiver",
+  "main": "dist/plugin.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "nmea",
+    "unicore",
+    "gps",
+    "gnss",
+    "rtk",
+    "signalk-node-server-plugin",
+    "signalk-webapp"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@signalk/server-api": "^2.8.0",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@gnss/rtcm": "^0.1.5",
+    "ntrip-client": "^1.1.1"
+  }
+}
