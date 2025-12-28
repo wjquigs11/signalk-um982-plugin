@@ -1,515 +1,502 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Satellite Visualization</title>
-    <!-- OpenLayers CSS and JS -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css"
-      type="text/css"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        background: #f5f5f5;
-      }
 
-      .systems-container {
-        display: flex;
-        flex-direction: column;
-        gap: 30px;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Satellite Visualization</title>
+  <!-- OpenLayers CSS and JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
 
-      .system-group {
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        padding: 15px;
-        background: #fafafa;
-      }
+    .systems-container {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
 
-      .system-title {
-        margin: 0 0 15px 0;
-        color: #333;
-        font-size: 20px;
-        font-weight: bold;
-      }
+    .system-group {
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      background: #fafafa;
+    }
 
-      .container {
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-      }
+    .system-title {
+      margin: 0 0 15px 0;
+      color: #333;
+      font-size: 20px;
+      font-weight: bold;
+    }
 
-      .position-rtk-column {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
+    .container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
 
-      .chart-container {
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        padding: 20px;
-      }
+    .position-rtk-column {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
 
-      .bar-chart {
-        width: 600px;
-        overflow: hidden;
-      }
+    .chart-container {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 20px;
+    }
 
-      .polar-chart {
-        width: 350px;
-      }
+    .bar-chart {
+      width: 600px;
+      overflow: hidden;
+    }
 
-      .heading-history-chart {
-        width: 400px;
-      }
+    .polar-chart {
+      width: 350px;
+    }
 
-      .map-chart {
-        width: 400px;
-        position: relative;
-      }
+    .heading-history-chart {
+      width: 400px;
+    }
 
-      .map-container {
-        width: 100%;
-        height: 300px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        position: relative;
-      }
+    .map-chart {
+      width: 400px;
+      position: relative;
+    }
 
-      .map-controls {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-      }
+    .map-container {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      position: relative;
+    }
 
-      .map-button {
-        width: 30px;
-        height: 30px;
-        background: white;
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
+    .map-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
 
-      .map-button:hover {
-        background: #f0f0f0;
-      }
+    .map-button {
+      width: 30px;
+      height: 30px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
 
-      .rtk-status-chart {
-        width: 250px;
-        position: relative;
-      }
+    .map-button:hover {
+      background: #f0f0f0;
+    }
 
-      .rtk-status-display {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        padding: 20px;
-      }
+    .rtk-status-chart {
+      width: 250px;
+      position: relative;
+    }
 
-      .rtk-item {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-      }
+    .rtk-status-display {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      padding: 20px;
+    }
 
-      .rtk-label {
-        font-size: 14px;
-        color: #666;
-        margin-bottom: 5px;
-        font-weight: normal;
-      }
+    .rtk-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
 
-      .rtk-value {
-        font-size: 20px;
-        font-weight: bold;
-        color: #2c5aa0;
-        line-height: 1.2;
-      }
+    .rtk-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+      font-weight: normal;
+    }
 
-      .rtk-unit {
-        font-size: 16px;
-        color: #666;
-        font-weight: normal;
-      }
+    .rtk-value {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2c5aa0;
+      line-height: 1.2;
+    }
 
-      .bar {
-        margin: 2px 0;
-        display: flex;
-        align-items: center;
-      }
+    .rtk-unit {
+      font-size: 16px;
+      color: #666;
+      font-weight: normal;
+    }
 
-      .bar-label {
-        width: 80px;
-        font-size: 12px;
-        text-align: right;
-        margin-right: 10px;
-      }
+    .bar {
+      margin: 2px 0;
+      display: flex;
+      align-items: center;
+    }
 
-      .bar-fill {
-        height: 20px;
-        min-width: 2px;
-        border-radius: 2px;
-        transition: all 0.3s ease;
-      }
+    .bar-label {
+      width: 80px;
+      font-size: 12px;
+      text-align: right;
+      margin-right: 10px;
+    }
 
-      .snr-value {
-        margin-left: 10px;
-        font-size: 11px;
-        color: #666;
-      }
+    .bar-fill {
+      height: 20px;
+      min-width: 2px;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
 
-      h2 {
-        margin-top: 0;
-        color: #333;
-        font-size: 18px;
-      }
+    .snr-value {
+      margin-left: 10px;
+      font-size: 11px;
+      color: #666;
+    }
 
-      .status {
-        margin-bottom: 15px;
-        padding: 10px;
-        border-radius: 3px;
-        font-size: 14px;
-      }
+    h2 {
+      margin-top: 0;
+      color: #333;
+      font-size: 18px;
+    }
 
-      .tab-navigation {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-      }
+    .status {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 3px;
+      font-size: 14px;
+    }
 
-      .tab-button {
-        padding: 8px 16px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        background: #f0f0f0;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background 0.2s ease;
-      }
+    .tab-navigation {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
 
-      .tab-button.active {
-        background: #2c5aa0;
-        color: white;
-        border-color: #2c5aa0;
-      }
+    .tab-button {
+      padding: 8px 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f0f0f0;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
 
-      .tab-button:hover {
-        background: #d9e2f3;
-      }
+    .tab-button.active {
+      background: #2c5aa0;
+      color: white;
+      border-color: #2c5aa0;
+    }
 
-      .tab-pane {
-        display: none;
-      }
+    .tab-button:hover {
+      background: #d9e2f3;
+    }
 
-      .tab-pane.active {
-        display: block;
-      }
+    .tab-pane {
+      display: none;
+    }
 
-      .settings-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
+    .tab-pane.active {
+      display: block;
+    }
 
-      .settings-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 12px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        background: #fff;
-      }
+    .settings-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
 
-      .settings-label {
-        font-weight: bold;
-        color: #333;
-      }
+    .settings-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+    }
 
-      .settings-select {
-        padding: 6px 10px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        font-size: 14px;
-      }
+    .settings-label {
+      font-weight: bold;
+      color: #333;
+    }
 
-      .settings-feedback {
-        margin-top: 15px;
-        font-size: 13px;
-        color: #2c5aa0;
-      }
+    .settings-select {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
 
-      .form-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-      }
+    .settings-feedback {
+      margin-top: 15px;
+      font-size: 13px;
+      color: #2c5aa0;
+    }
 
-      .form-row label {
-        min-width: 70px;
-        font-size: 13px;
-        color: #444;
-      }
+    .form-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
 
-      .form-row input {
-        width: 80px;
-        padding: 6px 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 14px;
-      }
+    .form-row label {
+      min-width: 70px;
+      font-size: 13px;
+      color: #444;
+    }
 
-      .settings-feedback.error {
-        color: #c0392b;
-      }
+    .form-row input {
+      width: 80px;
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
 
-      .connected {
-        background: #d4edda;
-        color: #155724;
-      }
+    .settings-feedback.error {
+      color: #c0392b;
+    }
 
-      .disconnected {
-        background: #f8d7da;
-        color: #721c24;
-      }
+    .connected {
+      background: #d4edda;
+      color: #155724;
+    }
 
-      /* Hover effects */
-      .bar:hover {
-        background: rgba(0, 123, 255, 0.1);
-        border-radius: 3px;
-        cursor: pointer;
-      }
+    .disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
 
-      .bar.dimmed {
-        opacity: 0.3;
-        transition: opacity 0.3s ease;
-      }
+    /* Hover effects */
+    .bar:hover {
+      background: rgba(0, 123, 255, 0.1);
+      border-radius: 3px;
+      cursor: pointer;
+    }
 
-      .bar:not(.dimmed) {
-        opacity: 1;
-        transition: opacity 0.3s ease;
-      }
+    .bar.dimmed {
+      opacity: 0.3;
+      transition: opacity 0.3s ease;
+    }
 
-      .satellite-circle.dimmed {
-        opacity: 0.3;
-      }
+    .bar:not(.dimmed) {
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
 
-      .satellite-circle:not(.dimmed) {
-        opacity: 1;
-      }
+    .satellite-circle.dimmed {
+      opacity: 0.3;
+    }
 
-      /* Position Types List Styles */
-      .position-types-list {
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-        font-size: 12px;
-      }
+    .satellite-circle:not(.dimmed) {
+      opacity: 1;
+    }
 
-      .position-type-row {
-        display: flex;
-        align-items: center;
-        padding: 4px 6px;
-        border-radius: 3px;
-        transition: all 0.3s ease;
-      }
+    /* Position Types List Styles */
+    .position-types-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 12px;
+    }
 
-      .position-type-row.active {
-        border: 2px solid;
-        font-weight: bold;
-        background-color: rgba(255, 255, 255, 0.1);
-      }
+    .position-type-row {
+      display: flex;
+      align-items: center;
+      padding: 4px 6px;
+      border-radius: 3px;
+      transition: all 0.3s ease;
+    }
 
-      .position-color-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 6px;
-        border: 1px solid rgba(0, 0, 0, 0.2);
-      }
+    .position-type-row.active {
+      border: 2px solid;
+      font-weight: bold;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
 
-      .position-type-text {
-        color: #333;
-        font-size: 11px;
-      }
+    .position-color-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+    }
 
-      /* SNR Chart Two-Column Layout */
-      .snr-columns {
-        display: flex;
-        gap: 20px;
-      }
+    .position-type-text {
+      color: #333;
+      font-size: 11px;
+    }
 
-      .snr-column {
-        flex: 1;
-        min-width: 0; /* Allow flex items to shrink */
-        overflow: hidden;
-      }
+    /* SNR Chart Two-Column Layout */
+    .snr-columns {
+      display: flex;
+      gap: 20px;
+    }
 
-      .snr-column h3 {
-        margin: 0 0 10px 0;
-        color: #333;
-        font-size: 14px;
-        font-weight: bold;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 5px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="status" class="status disconnected">Connecting to SignalK...</div>
+    .snr-column {
+      flex: 1;
+      min-width: 0;
+      /* Allow flex items to shrink */
+      overflow: hidden;
+    }
 
-    <div class="tab-navigation">
-      <button class="tab-button active" data-tab="status">Status</button>
-      <button class="tab-button" data-tab="settings">Settings</button>
-    </div>
+    .snr-column h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 14px;
+      font-weight: bold;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+    }
+  </style>
+</head>
 
-    <div id="tab-status" class="tab-pane active" data-tab="status">
-      <!-- All Systems Combined Content -->
-      <div id="all">
-        <div class="system-group">
-          <div class="container" id="main-container">
-            <div class="position-rtk-column">
-              <div class="chart-container map-chart">
-                <h2>Position Drift</h2>
-                <div class="map-controls">
-                  <button class="map-button" onclick="zoomIn()">+</button>
-                  <button class="map-button" onclick="zoomOut()">-</button>
-                </div>
-                <div id="map" class="map-container"></div>
+<body>
+  <div id="status" class="status disconnected">Connecting to SignalK...</div>
+
+  <div class="tab-navigation">
+    <button class="tab-button active" data-tab="status">Status</button>
+    <button class="tab-button" data-tab="settings">Settings</button>
+  </div>
+
+  <div id="tab-status" class="tab-pane active" data-tab="status">
+    <!-- All Systems Combined Content -->
+    <div id="all">
+      <div class="system-group">
+        <div class="container" id="main-container">
+          <div class="position-rtk-column">
+            <div class="chart-container map-chart">
+              <h2>Position Drift</h2>
+              <div class="map-controls">
+                <button class="map-button" onclick="zoomIn()">+</button>
+                <button class="map-button" onclick="zoomOut()">-</button>
               </div>
-              <div class="chart-container rtk-status-chart">
-                <h2>RTK Status</h2>
-                <div class="rtk-status-display">
-                  <div class="rtk-item">
-                    <div class="rtk-label">Heading True</div>
-                    <div class="rtk-value">
-                      <span id="headingTrue">--</span>
-                      <span class="rtk-unit">°</span>
+              <div id="map" class="map-container"></div>
+            </div>
+            <div class="chart-container rtk-status-chart">
+              <h2>RTK Status</h2>
+              <div class="rtk-status-display">
+                <div class="rtk-item">
+                  <div class="rtk-label">Heading True</div>
+                  <div class="rtk-value">
+                    <span id="headingTrue">--</span>
+                    <span class="rtk-unit">°</span>
+                  </div>
+                </div>
+                <div class="rtk-item">
+                  <div class="rtk-label">Latitude</div>
+                  <div class="rtk-value">
+                    <span id="latitude">--</span>
+                    <span class="rtk-unit">°</span>
+                  </div>
+                </div>
+                <div class="rtk-item">
+                  <div class="rtk-label">Longitude</div>
+                  <div class="rtk-value">
+                    <span id="longitude">--</span>
+                    <span class="rtk-unit">°</span>
+                  </div>
+                </div>
+                <div class="rtk-item">
+                  <div class="rtk-label">Baseline</div>
+                  <div class="rtk-value">
+                    <span id="baselineLength">--</span>
+                    <span class="rtk-unit">m</span>
+                  </div>
+                </div>
+                <div class="rtk-item" id="positionTypeItem">
+                  <div class="rtk-label">Position Type</div>
+                  <div class="position-types-list" id="positionTypesList">
+                    <div class="position-type-row" data-type="NARROW_INT">
+                      <span class="position-color-dot" style="background-color: #8b2df7"></span>
+                      <span class="position-type-text">NARROW_INT</span>
+                    </div>
+                    <div class="position-type-row" data-type="WIDE_INT">
+                      <span class="position-color-dot" style="background-color: #2d37f7"></span>
+                      <span class="position-type-text">WIDE_INT</span>
+                    </div>
+                    <div class="position-type-row" data-type="L1_INT">
+                      <span class="position-color-dot" style="background-color: #2d95f7"></span>
+                      <span class="position-type-text">L1_INT</span>
+                    </div>
+                    <div class="position-type-row" data-type="NARROW_FLOAT">
+                      <span class="position-color-dot" style="background-color: #e6ae08"></span>
+                      <span class="position-type-text">NARROW_FLOAT</span>
+                    </div>
+                    <div class="position-type-row" data-type="L1_FLOAT">
+                      <span class="position-color-dot" style="background-color: #e23809"></span>
+                      <span class="position-type-text">L1_FLOAT</span>
                     </div>
                   </div>
-                  <div class="rtk-item">
-                    <div class="rtk-label">Baseline</div>
-                    <div class="rtk-value">
-                      <span id="baselineLength">--</span>
-                      <span class="rtk-unit">m</span>
-                    </div>
-                  </div>
-                  <div class="rtk-item" id="positionTypeItem">
-                    <div class="rtk-label">Position Type</div>
-                    <div class="position-types-list" id="positionTypesList">
-                      <div class="position-type-row" data-type="NARROW_INT">
-                        <span
-                          class="position-color-dot"
-                          style="background-color: #8b2df7"
-                        ></span>
-                        <span class="position-type-text">NARROW_INT</span>
-                      </div>
-                      <div class="position-type-row" data-type="WIDE_INT">
-                        <span
-                          class="position-color-dot"
-                          style="background-color: #2d37f7"
-                        ></span>
-                        <span class="position-type-text">WIDE_INT</span>
-                      </div>
-                      <div class="position-type-row" data-type="L1_INT">
-                        <span
-                          class="position-color-dot"
-                          style="background-color: #2d95f7"
-                        ></span>
-                        <span class="position-type-text">L1_INT</span>
-                      </div>
-                      <div class="position-type-row" data-type="NARROW_FLOAT">
-                        <span
-                          class="position-color-dot"
-                          style="background-color: #e6ae08"
-                        ></span>
-                        <span class="position-type-text">NARROW_FLOAT</span>
-                      </div>
-                      <div class="position-type-row" data-type="L1_FLOAT">
-                        <span
-                          class="position-color-dot"
-                          style="background-color: #e23809"
-                        ></span>
-                        <span class="position-type-text">L1_FLOAT</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="rtk-item">
-                    <div class="rtk-label">Method Quality</div>
-                    <div class="rtk-value" id="methodQuality">--</div>
-                  </div>
-                  <div class="rtk-item">
-                    <div class="rtk-label">Horizontal DOP</div>
-                    <div class="rtk-value" id="horizontalDilution">--</div>
-                  </div>
+                </div>
+                <div class="rtk-item">
+                  <div class="rtk-label">Method Quality</div>
+                  <div class="rtk-value" id="methodQuality">--</div>
+                </div>
+                <div class="rtk-item">
+                  <div class="rtk-label">Horizontal DOP</div>
+                  <div class="rtk-value" id="horizontalDilution">--</div>
                 </div>
               </div>
             </div>
-            <div class="chart-container polar-chart">
-              <h2 id="polarChartTitle">Satellite Positions (Main Antenna)</h2>
-              <div id="polarChart">
-                <!-- SVG will be added by JavaScript -->
-              </div>
-              <h2>Heading History (5 minutes)</h2>
-              <div id="headingChart">
-                <!-- SVG will be added by JavaScript -->
-              </div>
-              <div
-                id="satelliteInfo"
-                style="
+          </div>
+          <div class="chart-container polar-chart">
+            <h2 id="polarChartTitle">Satellite Positions (Main Antenna)</h2>
+            <div id="polarChart">
+              <!-- SVG will be added by JavaScript -->
+            </div>
+            <h2>Heading History (5 minutes)</h2>
+            <div id="headingChart">
+              <!-- SVG will be added by JavaScript -->
+            </div>
+            <div id="satelliteInfo" style="
                   margin-top: 15px;
                   padding: 10px;
                   background-color: #f8f9fa;
                   border-radius: 5px;
                   border: 1px solid #ddd;
                   min-height: 60px;
-                "
-              >
-                <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #333">
-                  Satellite Details
-                </h3>
-                <div
-                  id="satelliteInfoContent"
-                  style="font-size: 12px; color: #666"
-                >
-                  Hover over a satellite in the chart above to see details
-                </div>
+                ">
+              <h3 style="margin: 0 0 8px 0; font-size: 14px; color: #333">
+                Satellite Details
+              </h3>
+              <div id="satelliteInfoContent" style="font-size: 12px; color: #666">
+                Hover over a satellite in the chart above to see details
               </div>
             </div>
-            <div class="chart-container bar-chart">
-              <h2>
-                Satellite SNR by System
-                <span
-                  style="
+          </div>
+          <div class="chart-container bar-chart">
+            <h2>
+              Satellite SNR by System
+              <span style="
                     font-size: 14px;
                     font-weight: normal;
                     margin-left: 20px;
-                  "
-                >
-                  <button
-                    id="mainToggle"
-                    onclick="toggleAntenna('main')"
-                    style="
+                  ">
+                <button id="mainToggle" onclick="toggleAntenna('main')" style="
                       background: #007bff;
                       color: white;
                       border: none;
@@ -518,14 +505,10 @@
                       border-radius: 3px;
                       cursor: pointer;
                       font-size: 12px;
-                    "
-                  >
-                    Main
-                  </button>
-                  <button
-                    id="slaveToggle"
-                    onclick="toggleAntenna('slave')"
-                    style="
+                    ">
+                  Main
+                </button>
+                <button id="slaveToggle" onclick="toggleAntenna('slave')" style="
                       background: #007bff;
                       color: white;
                       border: none;
@@ -534,658 +517,639 @@
                       border-radius: 3px;
                       cursor: pointer;
                       font-size: 12px;
-                    "
-                  >
-                    Slave
-                  </button>
-                </span>
-              </h2>
-              <div class="snr-columns">
-                <div class="snr-column">
-                  <div id="satelliteChartLeft"></div>
-                </div>
-                <div class="snr-column">
-                  <div id="satelliteChartRight"></div>
-                </div>
+                    ">
+                  Slave
+                </button>
+              </span>
+            </h2>
+            <div class="snr-columns">
+              <div class="snr-column">
+                <div id="satelliteChartLeft"></div>
+              </div>
+              <div class="snr-column">
+                <div id="satelliteChartRight"></div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <div id="tab-settings" class="tab-pane" data-tab="settings">
-      <div class="system-group" style="margin-bottom: 20px">
-        <h2>Sentences</h2>
-        <p style="margin: 0 0 15px 0; color: #555; font-size: 13px">
-          Choose how often each sentence is output. Changes are applied to the
-          device immediately. Save configuration to make the settings permanent
-          over device restarts.
-        </p>
-        <div class="settings-list">
-          <div class="settings-item">
-            <span class="settings-label"
-              >GPGSVH: Satellites in View (Slave Antenna)</span
-            >
-            <select class="settings-select" data-sentence="GPGSVH">
-              <option value="">None</option>
-              <option value="0.05">20 Hz</option>
-              <option value="0.1">10 Hz</option>
-              <option value="0.2">5 Hz</option>
-              <option value="0.5">2 Hz</option>
-              <option value="1">1 Hz</option>
-              <option value="5">Every 5 s</option>
-              <option value="10">Every 10 s</option>
-              <option value="20">Every 20 s</option>
-            </select>
-          </div>
-          <div class="settings-item">
-            <span class="settings-label"
-              >BESTSATA: Satellites Used in Position Solution</span
-            >
-            <select class="settings-select" data-sentence="BESTSATA">
-              <option value="">None</option>
-              <option value="0.05">20 Hz</option>
-              <option value="0.1">10 Hz</option>
-              <option value="0.2">5 Hz</option>
-              <option value="0.5">2 Hz</option>
-              <option value="1">1 Hz</option>
-              <option value="5">Every 5 s</option>
-              <option value="10">Every 10 s</option>
-              <option value="20">Every 20 s</option>
-            </select>
-          </div>
-          <div class="settings-item">
-            <span class="settings-label"
-              >GPHPR: heading, pitch, and roll angles</span
-            >
-            <select class="settings-select" data-sentence="GPHPR">
-              <option value="">None</option>
-              <option value="0.05">20 Hz</option>
-              <option value="0.1">10 Hz</option>
-              <option value="0.2">5 Hz</option>
-              <option value="0.5">2 Hz</option>
-              <option value="1">1 Hz</option>
-              <option value="5">Every 5 s</option>
-              <option value="10">Every 10 s</option>
-              <option value="20">Every 20 s</option>
-            </select>
-          </div>
-          <div class="settings-item">
-            <span class="settings-label">UNIHEADINGA: Heading Information</span>
-            <select class="settings-select" data-sentence="UNIHEADINGA">
-              <option value="">None</option>
-              <option value="0.05">20 Hz</option>
-              <option value="0.1">10 Hz</option>
-              <option value="0.2">5 Hz</option>
-              <option value="0.5">2 Hz</option>
-              <option value="1">1 Hz</option>
-              <option value="5">Every 5 s</option>
-              <option value="10">Every 10 s</option>
-              <option value="20">Every 20 s</option>
-            </select>
-          </div>
+  <div id="tab-settings" class="tab-pane" data-tab="settings">
+    <div class="system-group" style="margin-bottom: 20px">
+      <h2>Sentences</h2>
+      <p style="margin: 0 0 15px 0; color: #555; font-size: 13px">
+        Choose how often each sentence is output. Changes are applied to the
+        device immediately. Save configuration to make the settings permanent
+        over device restarts.
+      </p>
+      <div class="settings-list">
+        <div class="settings-item">
+          <span class="settings-label">GPGSVH: Satellites in View (Slave Antenna)</span>
+          <select class="settings-select" data-sentence="GPGSVH">
+            <option value="">None</option>
+            <option value="0.05">20 Hz</option>
+            <option value="0.1">10 Hz</option>
+            <option value="0.2">5 Hz</option>
+            <option value="0.5">2 Hz</option>
+            <option value="1">1 Hz</option>
+            <option value="5">Every 5 s</option>
+            <option value="10">Every 10 s</option>
+            <option value="20">Every 20 s</option>
+          </select>
         </div>
-      </div>
-      <button
-        id="saveConfigButton"
-        class="tab-button"
-        style="margin: 0 0 20px 0; align-self: flex-start"
-      >
-        Save Device's Current Configuration
-      </button>
-      <div id="settingsFeedback" class="settings-feedback"></div>
-      <div class="system-group">
-        <h2>Baseline length (cm)</h2>
-        <div class="form-row">
-          <label for="baselineLengthInput">Length (cm)</label>
-          <input
-            type="number"
-            id="baselineLengthInput"
-            min="1"
-            step="1"
-            value="200"
-          />
+        <div class="settings-item">
+          <span class="settings-label">BESTSATA: Satellites Used in Position Solution</span>
+          <select class="settings-select" data-sentence="BESTSATA">
+            <option value="">None</option>
+            <option value="0.05">20 Hz</option>
+            <option value="0.1">10 Hz</option>
+            <option value="0.2">5 Hz</option>
+            <option value="0.5">2 Hz</option>
+            <option value="1">1 Hz</option>
+            <option value="5">Every 5 s</option>
+            <option value="10">Every 10 s</option>
+            <option value="20">Every 20 s</option>
+          </select>
         </div>
-        <div class="form-row">
-          <label for="baselineToleranceInput">Tolerance</label>
-          <input type="number" id="baselineToleranceInput" min="0" step="1" />
+        <div class="settings-item">
+          <span class="settings-label">GPHPR: heading, pitch, and roll angles</span>
+          <select class="settings-select" data-sentence="GPHPR">
+            <option value="">None</option>
+            <option value="0.05">20 Hz</option>
+            <option value="0.1">10 Hz</option>
+            <option value="0.2">5 Hz</option>
+            <option value="0.5">2 Hz</option>
+            <option value="1">1 Hz</option>
+            <option value="5">Every 5 s</option>
+            <option value="10">Every 10 s</option>
+            <option value="20">Every 20 s</option>
+          </select>
         </div>
-        <button
-          id="baselineSetButton"
-          class="tab-button"
-          style="margin-top: 10px; align-self: flex-start"
-          disabled
-        >
-          Set
-        </button>
+        <div class="settings-item">
+          <span class="settings-label">UNIHEADINGA: Heading Information</span>
+          <select class="settings-select" data-sentence="UNIHEADINGA">
+            <option value="">None</option>
+            <option value="0.05">20 Hz</option>
+            <option value="0.1">10 Hz</option>
+            <option value="0.2">5 Hz</option>
+            <option value="0.5">2 Hz</option>
+            <option value="1">1 Hz</option>
+            <option value="5">Every 5 s</option>
+            <option value="10">Every 10 s</option>
+            <option value="20">Every 20 s</option>
+          </select>
+        </div>
       </div>
     </div>
+    <button id="saveConfigButton" class="tab-button" style="margin: 0 0 20px 0; align-self: flex-start">
+      Save Device's Current Configuration
+    </button>
+    <div id="settingsFeedback" class="settings-feedback"></div>
+    <div class="system-group">
+      <h2>Baseline length (cm)</h2>
+      <div class="form-row">
+        <label for="baselineLengthInput">Length (cm)</label>
+        <input type="number" id="baselineLengthInput" min="1" step="1" value="200" />
+      </div>
+      <div class="form-row">
+        <label for="baselineToleranceInput">Tolerance</label>
+        <input type="number" id="baselineToleranceInput" min="0" step="1" />
+      </div>
+      <button id="baselineSetButton" class="tab-button" style="margin-top: 10px; align-self: flex-start" disabled>
+        Set
+      </button>
+    </div>
+  </div>
 
-    <script>
-      let ws = null;
-      let satelliteData = {}; // Store satellite data by GNSS system
-      let satellitesUsed = []; // Store satellites used in fix
-      let cleanupTimer = null; // Timer for periodic cleanup
-      let mainAntennaVisible = true; // Track main antenna visibility
-      let slaveAntennaVisible = true; // Track slave antenna visibility
+  <script>
+    let ws = null;
+    let satelliteData = {}; // Store satellite data by GNSS system
+    let satellitesUsed = []; // Store satellites used in fix
+    let cleanupTimer = null; // Timer for periodic cleanup
+    let mainAntennaVisible = true; // Track main antenna visibility
+    let slaveAntennaVisible = true; // Track slave antenna visibility
 
-      const pluginBaseUrl = `${window.location.origin}/plugins/tkurki-um982`;
-      const baselineStorageKey = "baselineConfig";
+    const pluginBaseUrl = `${window.location.origin}/plugins/tkurki-um982`;
+    const baselineStorageKey = "baselineConfig";
 
-      // OpenLayers map variables
-      let map = null;
-      let positionMarker = null;
-      let currentPosition = [-0.0005, 51.4769]; // Default: Greenwich, London, UK [lon, lat]
-      let positionTrail = []; // Array to store position history
-      let trailLayer = null; // Layer for trail dots
-      let scaleLineControl = null; // ScaleLine control reference
-      let headingArrow = null; // Feature for heading arrow
-      let currentHeading = null; // Current heading in radians
-      let headingTrue = null; // True heading in degrees
-      let baselineLength = null; // RTK baseline length in meters
-      let positionType = null; // RTK position type string
-      let methodQuality = null; // GNSS method quality string
-      let horizontalDilution = null; // GNSS horizontal dilution of precision
-      const maxTrailPoints = 200;
-      const maxTrailAge = 5 * 60 * 1000; // 5 minutes in milliseconds
+    // OpenLayers map variables
+    let map = null;
+    let positionMarker = null;
+    let currentPosition = [-0.0005, 51.4769]; // Default: Greenwich, London, UK [lon, lat]
+    let positionTrail = []; // Array to store position history
+    let trailLayer = null; // Layer for trail dots
+    let scaleLineControl = null; // ScaleLine control reference
+    let headingArrow = null; // Feature for heading arrow
+    let currentHeading = null; // Current heading in radians
+    let headingTrue = null; // True heading in degrees
+    let baselineLength = null; // RTK baseline length in meters
+    let positionType = null; // RTK position type string
+    let methodQuality = null; // GNSS method quality string
+    let horizontalDilution = null; // GNSS horizontal dilution of precision
+    let currentLatitude = null; // Current latitude in degrees
+    let currentLongitude = null; // Current longitude in degrees
 
-      // Heading history variables
-      let headingHistory = []; // Array to store heading history
-      let headingAverage = null; // Current heading average
-      const maxHeadingHistory = 300; // 5 minutes at 1 second intervals
-      const headingAverageUpdateInterval = 15000; // 15 seconds
-      let lastHeadingAverageUpdate = 0;
+    const maxTrailPoints = 200;
+    const maxTrailAge = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-      // IndexedDB variables
-      let db = null;
-      const dbName = "GNSSHistoryDB";
-      const dbVersion = 1;
+    // Heading history variables
+    let headingHistory = []; // Array to store heading history
+    let headingAverage = null; // Current heading average
+    const maxHeadingHistory = 300; // 5 minutes at 1 second intervals
+    const headingAverageUpdateInterval = 15000; // 15 seconds
+    let lastHeadingAverageUpdate = 0;
 
-      // Initialize IndexedDB
-      function initIndexedDB() {
-        return new Promise((resolve, reject) => {
-          const request = indexedDB.open(dbName, dbVersion);
+    // IndexedDB variables
+    let db = null;
+    const dbName = "GNSSHistoryDB";
+    const dbVersion = 1;
 
-          request.onerror = () => {
-            console.error("Error opening IndexedDB:", request.error);
-            reject(request.error);
-          };
+    // Initialize IndexedDB
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, dbVersion);
 
-          request.onsuccess = () => {
-            db = request.result;
-            console.log("IndexedDB opened successfully");
-            resolve(db);
-          };
-
-          request.onupgradeneeded = (event) => {
-            db = event.target.result;
-
-            // Create object stores if they don't exist
-            if (!db.objectStoreNames.contains("positionHistory")) {
-              const positionStore = db.createObjectStore("positionHistory", {
-                keyPath: "id",
-                autoIncrement: true,
-              });
-              positionStore.createIndex("timestamp", "timestamp", {
-                unique: false,
-              });
-            }
-
-            if (!db.objectStoreNames.contains("headingHistory")) {
-              const headingStore = db.createObjectStore("headingHistory", {
-                keyPath: "id",
-                autoIncrement: true,
-              });
-              headingStore.createIndex("timestamp", "timestamp", {
-                unique: false,
-              });
-            }
-          };
-        });
-      }
-
-      // Save position history to IndexedDB
-      function savePositionHistory() {
-        if (!db || positionTrail.length === 0) return;
-
-        try {
-          const transaction = db.transaction(["positionHistory"], "readwrite");
-          const store = transaction.objectStore("positionHistory");
-
-          transaction.oncomplete = () => {
-            console.log(
-              `Saved ${positionTrail.length} position history points to IndexedDB`
-            );
-          };
-
-          transaction.onerror = (event) => {
-            console.error("Error saving position history:", event.target.error);
-          };
-
-          // Clear existing data first
-          const clearRequest = store.clear();
-          clearRequest.onsuccess = () => {
-            // Save current trail one by one
-            let saveCount = 0;
-            positionTrail.forEach((position, index) => {
-              const addRequest = store.add(position);
-              addRequest.onsuccess = () => {
-                saveCount++;
-                if (saveCount === positionTrail.length) {
-                  console.log(
-                    `Successfully saved all ${saveCount} position points`
-                  );
-                }
-              };
-              addRequest.onerror = (event) => {
-                console.error(
-                  `Error saving position point ${index}:`,
-                  event.target.error
-                );
-              };
-            });
-          };
-
-          clearRequest.onerror = (event) => {
-            console.error(
-              "Error clearing position history store:",
-              event.target.error
-            );
-          };
-        } catch (error) {
-          console.error("Exception in savePositionHistory:", error);
-        }
-      }
-
-      // Load position history from IndexedDB
-      function loadPositionHistory() {
-        return new Promise((resolve, reject) => {
-          if (!db) {
-            resolve([]);
-            return;
-          }
-
-          const transaction = db.transaction(["positionHistory"], "readonly");
-          const store = transaction.objectStore("positionHistory");
-          const request = store.getAll();
-
-          request.onsuccess = () => {
-            const positions = request.result || [];
-
-            // Filter out old positions (older than maxTrailAge)
-            const cutoffTime = Date.now() - maxTrailAge;
-            const validPositions = positions.filter(
-              (pos) => pos.timestamp > cutoffTime
-            );
-
-            // Limit to maxTrailPoints
-            const limitedPositions = validPositions.slice(-maxTrailPoints);
-
-            resolve(limitedPositions);
-          };
-
-          request.onerror = () => {
-            console.error("Error loading position history:", request.error);
-            resolve([]);
-          };
-        });
-      }
-
-      // Save heading history to IndexedDB
-      function saveHeadingHistory() {
-        if (!db || headingHistory.length === 0) return;
-
-        try {
-          const transaction = db.transaction(["headingHistory"], "readwrite");
-          const store = transaction.objectStore("headingHistory");
-
-          transaction.oncomplete = () => {
-            console.log(
-              `Saved ${headingHistory.length} heading history points to IndexedDB`
-            );
-          };
-
-          transaction.onerror = (event) => {
-            console.error("Error saving heading history:", event.target.error);
-          };
-
-          // Clear existing data first
-          const clearRequest = store.clear();
-          clearRequest.onsuccess = () => {
-            // Save current history one by one
-            let saveCount = 0;
-            headingHistory.forEach((heading, index) => {
-              const addRequest = store.add(heading);
-              addRequest.onsuccess = () => {
-                saveCount++;
-                if (saveCount === headingHistory.length) {
-                  console.log(
-                    `Successfully saved all ${saveCount} heading points`
-                  );
-                }
-              };
-              addRequest.onerror = (event) => {
-                console.error(
-                  `Error saving heading point ${index}:`,
-                  event.target.error
-                );
-              };
-            });
-          };
-
-          clearRequest.onerror = (event) => {
-            console.error(
-              "Error clearing heading history store:",
-              event.target.error
-            );
-          };
-        } catch (error) {
-          console.error("Exception in saveHeadingHistory:", error);
-        }
-      }
-
-      // Load heading history from IndexedDB
-      function loadHeadingHistory() {
-        return new Promise((resolve, reject) => {
-          if (!db) {
-            resolve([]);
-            return;
-          }
-
-          const transaction = db.transaction(["headingHistory"], "readonly");
-          const store = transaction.objectStore("headingHistory");
-          const request = store.getAll();
-
-          request.onsuccess = () => {
-            const headings = request.result || [];
-
-            // Filter out old headings (older than 5 minutes)
-            const cutoffTime = Date.now() - 5 * 60 * 1000;
-            const validHeadings = headings.filter(
-              (heading) => heading.timestamp > cutoffTime
-            );
-
-            // Limit to maxHeadingHistory
-            const limitedHeadings = validHeadings.slice(-maxHeadingHistory);
-
-            const normalizedHeadings = limitedHeadings.map((entry) => ({
-              ...entry,
-              positionType: entry.positionType || null,
-            }));
-
-            resolve(normalizedHeadings);
-          };
-
-          request.onerror = () => {
-            console.error("Error loading heading history:", request.error);
-            resolve([]);
-          };
-        });
-      }
-
-      // Periodic save function
-      function saveHistoryPeriodically() {
-        savePositionHistory();
-        saveHeadingHistory();
-      }
-
-      // Position Type color mapping
-      const positionTypeColors = {
-        NARROW_INT: "#8B2DF7", // brighter blue
-        WIDE_INT: "#2D37F7", // brighter mid blue
-        L1_INT: "#2D95F7", // brighter light blue
-        NARROW_FLOAT: "#E6AE08", // brighter orange
-        L1_FLOAT: "#E23809", // brighter light orange
-      };
-
-      function getPositionTypeColor(posType) {
-        return positionTypeColors[posType] || "#666666"; // default grey
-      }
-
-      function getSnrColor(snr) {
-        // Convert SNR (0-50) to color from red to green
-        if (!snr || snr <= 0) return "#cccccc"; // grey for no signal
-        const normalized = Math.max(0, Math.min(50, snr)) / 50;
-        const red = Math.floor(255 * (1 - normalized));
-        const green = Math.floor(255 * normalized);
-        return `rgb(${red}, ${green}, 0)`;
-      }
-
-      function getGnssSystemName(gnssValue) {
-        // Map GNSS system values to friendly names
-        const systemNames = {
-          GPS: "GPS",
-          GLONASS: "GLONASS",
-          Galileo: "Galileo",
-          BeiDou: "BeiDou",
-          QZSS: "QZSS",
-          NavIC: "NavIC",
-          SBAS: "SBAS",
+        request.onerror = () => {
+          console.error("Error opening IndexedDB:", request.error);
+          reject(request.error);
         };
-        return systemNames[gnssValue] || gnssValue || "Unknown";
-      }
 
-      function initTabNavigation() {
-        const buttons = document.querySelectorAll(".tab-button");
-        const panes = document.querySelectorAll(".tab-pane");
+        request.onsuccess = () => {
+          db = request.result;
+          console.log("IndexedDB opened successfully");
+          resolve(db);
+        };
 
-        buttons.forEach((button) => {
-          button.addEventListener("click", () => {
-            const target = button.getAttribute("data-tab");
+        request.onupgradeneeded = (event) => {
+          db = event.target.result;
 
-            buttons.forEach((btn) => {
-              btn.classList.toggle("active", btn === button);
+          // Create object stores if they don't exist
+          if (!db.objectStoreNames.contains("positionHistory")) {
+            const positionStore = db.createObjectStore("positionHistory", {
+              keyPath: "id",
+              autoIncrement: true,
             });
+            positionStore.createIndex("timestamp", "timestamp", {
+              unique: false,
+            });
+          }
 
-            panes.forEach((pane) => {
-              pane.classList.toggle(
-                "active",
-                pane.getAttribute("data-tab") === target
+          if (!db.objectStoreNames.contains("headingHistory")) {
+            const headingStore = db.createObjectStore("headingHistory", {
+              keyPath: "id",
+              autoIncrement: true,
+            });
+            headingStore.createIndex("timestamp", "timestamp", {
+              unique: false,
+            });
+          }
+        };
+      });
+    }
+
+    // Save position history to IndexedDB
+    function savePositionHistory() {
+      if (!db || positionTrail.length === 0) return;
+
+      try {
+        const transaction = db.transaction(["positionHistory"], "readwrite");
+        const store = transaction.objectStore("positionHistory");
+
+        transaction.oncomplete = () => {
+          console.log(
+            `Saved ${positionTrail.length} position history points to IndexedDB`
+          );
+        };
+
+        transaction.onerror = (event) => {
+          console.error("Error saving position history:", event.target.error);
+        };
+
+        // Clear existing data first
+        const clearRequest = store.clear();
+        clearRequest.onsuccess = () => {
+          // Save current trail one by one
+          let saveCount = 0;
+          positionTrail.forEach((position, index) => {
+            const addRequest = store.add(position);
+            addRequest.onsuccess = () => {
+              saveCount++;
+              if (saveCount === positionTrail.length) {
+                console.log(
+                  `Successfully saved all ${saveCount} position points`
+                );
+              }
+            };
+            addRequest.onerror = (event) => {
+              console.error(
+                `Error saving position point ${index}:`,
+                event.target.error
               );
-            });
+            };
           });
-        });
-      }
+        };
 
-      function showSettingsFeedback(message, isError = false) {
-        const feedback = document.getElementById("settingsFeedback");
-        if (!feedback) {
+        clearRequest.onerror = (event) => {
+          console.error(
+            "Error clearing position history store:",
+            event.target.error
+          );
+        };
+      } catch (error) {
+        console.error("Exception in savePositionHistory:", error);
+      }
+    }
+
+    // Load position history from IndexedDB
+    function loadPositionHistory() {
+      return new Promise((resolve, reject) => {
+        if (!db) {
+          resolve([]);
           return;
         }
 
-        feedback.textContent = message;
-        feedback.classList.toggle("error", Boolean(isError));
-      }
+        const transaction = db.transaction(["positionHistory"], "readonly");
+        const store = transaction.objectStore("positionHistory");
+        const request = store.getAll();
 
-      function formatIntervalLabel(intervalValue) {
-        if (intervalValue === null || intervalValue === undefined) {
-          return "disabled";
+        request.onsuccess = () => {
+          const positions = request.result || [];
+
+          // Filter out old positions (older than maxTrailAge)
+          const cutoffTime = Date.now() - maxTrailAge;
+          const validPositions = positions.filter(
+            (pos) => pos.timestamp > cutoffTime
+          );
+
+          // Limit to maxTrailPoints
+          const limitedPositions = validPositions.slice(-maxTrailPoints);
+
+          resolve(limitedPositions);
+        };
+
+        request.onerror = () => {
+          console.error("Error loading position history:", request.error);
+          resolve([]);
+        };
+      });
+    }
+
+    // Save heading history to IndexedDB
+    function saveHeadingHistory() {
+      if (!db || headingHistory.length === 0) return;
+
+      try {
+        const transaction = db.transaction(["headingHistory"], "readwrite");
+        const store = transaction.objectStore("headingHistory");
+
+        transaction.oncomplete = () => {
+          console.log(
+            `Saved ${headingHistory.length} heading history points to IndexedDB`
+          );
+        };
+
+        transaction.onerror = (event) => {
+          console.error("Error saving heading history:", event.target.error);
+        };
+
+        // Clear existing data first
+        const clearRequest = store.clear();
+        clearRequest.onsuccess = () => {
+          // Save current history one by one
+          let saveCount = 0;
+          headingHistory.forEach((heading, index) => {
+            const addRequest = store.add(heading);
+            addRequest.onsuccess = () => {
+              saveCount++;
+              if (saveCount === headingHistory.length) {
+                console.log(
+                  `Successfully saved all ${saveCount} heading points`
+                );
+              }
+            };
+            addRequest.onerror = (event) => {
+              console.error(
+                `Error saving heading point ${index}:`,
+                event.target.error
+              );
+            };
+          });
+        };
+
+        clearRequest.onerror = (event) => {
+          console.error(
+            "Error clearing heading history store:",
+            event.target.error
+          );
+        };
+      } catch (error) {
+        console.error("Exception in saveHeadingHistory:", error);
+      }
+    }
+
+    // Load heading history from IndexedDB
+    function loadHeadingHistory() {
+      return new Promise((resolve, reject) => {
+        if (!db) {
+          resolve([]);
+          return;
         }
 
-        const value =
+        const transaction = db.transaction(["headingHistory"], "readonly");
+        const store = transaction.objectStore("headingHistory");
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+          const headings = request.result || [];
+
+          // Filter out old headings (older than 5 minutes)
+          const cutoffTime = Date.now() - 5 * 60 * 1000;
+          const validHeadings = headings.filter(
+            (heading) => heading.timestamp > cutoffTime
+          );
+
+          // Limit to maxHeadingHistory
+          const limitedHeadings = validHeadings.slice(-maxHeadingHistory);
+
+          const normalizedHeadings = limitedHeadings.map((entry) => ({
+            ...entry,
+            positionType: entry.positionType || null,
+          }));
+
+          resolve(normalizedHeadings);
+        };
+
+        request.onerror = () => {
+          console.error("Error loading heading history:", request.error);
+          resolve([]);
+        };
+      });
+    }
+
+    // Periodic save function
+    function saveHistoryPeriodically() {
+      savePositionHistory();
+      saveHeadingHistory();
+    }
+
+    // Position Type color mapping
+    const positionTypeColors = {
+      NARROW_INT: "#8B2DF7", // brighter blue
+      WIDE_INT: "#2D37F7", // brighter mid blue
+      L1_INT: "#2D95F7", // brighter light blue
+      NARROW_FLOAT: "#E6AE08", // brighter orange
+      L1_FLOAT: "#E23809", // brighter light orange
+    };
+
+    function getPositionTypeColor(posType) {
+      return positionTypeColors[posType] || "#666666"; // default grey
+    }
+
+    function getSnrColor(snr) {
+      // Convert SNR (0-50) to color from red to green
+      if (!snr || snr <= 0) return "#cccccc"; // grey for no signal
+      const normalized = Math.max(0, Math.min(50, snr)) / 50;
+      const red = Math.floor(255 * (1 - normalized));
+      const green = Math.floor(255 * normalized);
+      return `rgb(${red}, ${green}, 0)`;
+    }
+
+    function getGnssSystemName(gnssValue) {
+      // Map GNSS system values to friendly names
+      const systemNames = {
+        GPS: "GPS",
+        GLONASS: "GLONASS",
+        Galileo: "Galileo",
+        BeiDou: "BeiDou",
+        QZSS: "QZSS",
+        NavIC: "NavIC",
+        SBAS: "SBAS",
+      };
+      return systemNames[gnssValue] || gnssValue || "Unknown";
+    }
+
+    function initTabNavigation() {
+      const buttons = document.querySelectorAll(".tab-button");
+      const panes = document.querySelectorAll(".tab-pane");
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.getAttribute("data-tab");
+
+          buttons.forEach((btn) => {
+            btn.classList.toggle("active", btn === button);
+          });
+
+          panes.forEach((pane) => {
+            pane.classList.toggle(
+              "active",
+              pane.getAttribute("data-tab") === target
+            );
+          });
+        });
+      });
+    }
+
+    function showSettingsFeedback(message, isError = false) {
+      const feedback = document.getElementById("settingsFeedback");
+      if (!feedback) {
+        return;
+      }
+
+      feedback.textContent = message;
+      feedback.classList.toggle("error", Boolean(isError));
+    }
+
+    function formatIntervalLabel(intervalValue) {
+      if (intervalValue === null || intervalValue === undefined) {
+        return "disabled";
+      }
+
+      const value =
+        typeof intervalValue === "number"
+          ? intervalValue
+          : Number.parseFloat(intervalValue);
+
+      if (!Number.isFinite(value) || value <= 0) {
+        return `${intervalValue}`;
+      }
+
+      const hzLabels = {
+        1: "1 Hz",
+        0.5: "2 Hz",
+        0.2: "5 Hz",
+        0.1: "10 Hz",
+        0.05: "20 Hz",
+      };
+
+      const roundedValue = Number(value.toFixed(3));
+      const label = hzLabels[String(roundedValue)];
+      if (label) {
+        return label;
+      }
+
+      if (value >= 1) {
+        return `Every ${value} s`;
+      }
+
+      const hz = 1 / value;
+      if (hz >= 1) {
+        const formattedHz = Number(hz.toFixed(1));
+        return `${formattedHz} Hz`;
+      }
+
+      return `${value} s`;
+    }
+
+    async function sendSentenceConfiguration(sentence, intervalValue) {
+      const encodedSentence = encodeURIComponent(sentence);
+      let url = `${pluginBaseUrl}/send/${encodedSentence}`;
+
+      if (intervalValue !== null) {
+        const intervalParam =
           typeof intervalValue === "number"
             ? intervalValue
             : Number.parseFloat(intervalValue);
-
-        if (!Number.isFinite(value) || value <= 0) {
-          return `${intervalValue}`;
-        }
-
-        const hzLabels = {
-          1: "1 Hz",
-          0.5: "2 Hz",
-          0.2: "5 Hz",
-          0.1: "10 Hz",
-          0.05: "20 Hz",
-        };
-
-        const roundedValue = Number(value.toFixed(3));
-        const label = hzLabels[String(roundedValue)];
-        if (label) {
-          return label;
-        }
-
-        if (value >= 1) {
-          return `Every ${value} s`;
-        }
-
-        const hz = 1 / value;
-        if (hz >= 1) {
-          const formattedHz = Number(hz.toFixed(1));
-          return `${formattedHz} Hz`;
-        }
-
-        return `${value} s`;
+        url += `/${intervalParam}`;
       }
 
-      async function sendSentenceConfiguration(sentence, intervalValue) {
-        const encodedSentence = encodeURIComponent(sentence);
-        let url = `${pluginBaseUrl}/send/${encodedSentence}`;
-
-        if (intervalValue !== null) {
-          const intervalParam =
-            typeof intervalValue === "number"
-              ? intervalValue
-              : Number.parseFloat(intervalValue);
-          url += `/${intervalParam}`;
-        }
-
-        try {
-          const response = await fetch(url, {
-            method: "POST",
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const summaryText =
-            intervalValue === null
-              ? "disabled"
-              : `set to ${formatIntervalLabel(intervalValue)}`;
-          showSettingsFeedback(`Sentence ${sentence} ${summaryText}.`);
-        } catch (error) {
-          const message =
-            error instanceof Error ? error.message : String(error);
-          console.error("Failed to send configuration", error);
-          showSettingsFeedback(`Failed to send ${sentence}: ${message}`, true);
-        }
-      }
-
-      function initSettingsControls() {
-        const selects = document.querySelectorAll(".settings-select");
-        const saveButton = document.getElementById("saveConfigButton");
-        const baselineLengthInput = document.getElementById(
-          "baselineLengthInput"
-        );
-        const baselineToleranceInput = document.getElementById(
-          "baselineToleranceInput"
-        );
-        const baselineSetButton = document.getElementById("baselineSetButton");
-
-        selects.forEach((select) => {
-          select.addEventListener("change", () => {
-            const sentence = select.getAttribute("data-sentence");
-            if (!sentence) {
-              return;
-            }
-
-            const value = select.value;
-            const intervalValue =
-              value === "" ? null : Number.parseFloat(value);
-            sendSentenceConfiguration(sentence, intervalValue);
-          });
+      try {
+        const response = await fetch(url, {
+          method: "POST",
         });
 
-        if (saveButton) {
-          saveButton.addEventListener("click", () => {
-            sendSentenceConfiguration("SAVECONFIG", null);
-          });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
 
-        if (
-          baselineLengthInput instanceof HTMLInputElement &&
-          baselineToleranceInput instanceof HTMLInputElement &&
-          baselineSetButton instanceof HTMLButtonElement
-        ) {
-          const applyStoredBaseline = () => {
-            try {
-              const stored = window.localStorage.getItem(baselineStorageKey);
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                if (
-                  typeof parsed.length === "number" &&
-                  typeof parsed.tolerance === "number"
-                ) {
-                  baselineLengthInput.value = String(parsed.length);
-                  baselineToleranceInput.value = String(parsed.tolerance);
-                }
-              } else {
-                baselineLengthInput.value = "200";
-                baselineToleranceInput.value = "5";
+        const summaryText =
+          intervalValue === null
+            ? "disabled"
+            : `set to ${formatIntervalLabel(intervalValue)}`;
+        showSettingsFeedback(`Sentence ${sentence} ${summaryText}.`);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error);
+        console.error("Failed to send configuration", error);
+        showSettingsFeedback(`Failed to send ${sentence}: ${message}`, true);
+      }
+    }
+
+    function initSettingsControls() {
+      const selects = document.querySelectorAll(".settings-select");
+      const saveButton = document.getElementById("saveConfigButton");
+      const baselineLengthInput = document.getElementById(
+        "baselineLengthInput"
+      );
+      const baselineToleranceInput = document.getElementById(
+        "baselineToleranceInput"
+      );
+      const baselineSetButton = document.getElementById("baselineSetButton");
+
+      selects.forEach((select) => {
+        select.addEventListener("change", () => {
+          const sentence = select.getAttribute("data-sentence");
+          if (!sentence) {
+            return;
+          }
+
+          const value = select.value;
+          const intervalValue =
+            value === "" ? null : Number.parseFloat(value);
+          sendSentenceConfiguration(sentence, intervalValue);
+        });
+      });
+
+      if (saveButton) {
+        saveButton.addEventListener("click", () => {
+          sendSentenceConfiguration("SAVECONFIG", null);
+        });
+      }
+
+      if (
+        baselineLengthInput instanceof HTMLInputElement &&
+        baselineToleranceInput instanceof HTMLInputElement &&
+        baselineSetButton instanceof HTMLButtonElement
+      ) {
+        const applyStoredBaseline = () => {
+          try {
+            const stored = window.localStorage.getItem(baselineStorageKey);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (
+                typeof parsed.length === "number" &&
+                typeof parsed.tolerance === "number"
+              ) {
+                baselineLengthInput.value = String(parsed.length);
+                baselineToleranceInput.value = String(parsed.tolerance);
               }
-            } catch (error) {
-              console.error("Failed to parse stored baseline config", error);
+            } else {
               baselineLengthInput.value = "200";
               baselineToleranceInput.value = "5";
             }
-          };
+          } catch (error) {
+            console.error("Failed to parse stored baseline config", error);
+            baselineLengthInput.value = "200";
+            baselineToleranceInput.value = "5";
+          }
+        };
 
-          const validateBaselineInputs = () => {
-            const lengthValue = Number.parseInt(baselineLengthInput.value, 10);
-            const toleranceValue = Number.parseInt(
-              baselineToleranceInput.value,
-              10
-            );
-            const isValid =
-              Number.isInteger(lengthValue) &&
-              lengthValue > 0 &&
-              Number.isInteger(toleranceValue) &&
-              toleranceValue >= 0;
-            baselineSetButton.disabled = !isValid;
-            return isValid ? { lengthValue, toleranceValue } : null;
-          };
+        const validateBaselineInputs = () => {
+          const lengthValue = Number.parseInt(baselineLengthInput.value, 10);
+          const toleranceValue = Number.parseInt(
+            baselineToleranceInput.value,
+            10
+          );
+          const isValid =
+            Number.isInteger(lengthValue) &&
+            lengthValue > 0 &&
+            Number.isInteger(toleranceValue) &&
+            toleranceValue >= 0;
+          baselineSetButton.disabled = !isValid;
+          return isValid ? { lengthValue, toleranceValue } : null;
+        };
 
-          applyStoredBaseline();
-          validateBaselineInputs();
+        applyStoredBaseline();
+        validateBaselineInputs();
 
-          baselineLengthInput.addEventListener("input", validateBaselineInputs);
-          baselineToleranceInput.addEventListener(
-            "input",
-            validateBaselineInputs
+        baselineLengthInput.addEventListener("input", validateBaselineInputs);
+        baselineToleranceInput.addEventListener(
+          "input",
+          validateBaselineInputs
+        );
+
+        baselineSetButton.addEventListener("click", () => {
+          const result = validateBaselineInputs();
+          if (!result) {
+            return;
+          }
+
+          const { lengthValue, toleranceValue } = result;
+
+          sendSentenceConfiguration(
+            "CONFIG HEADING LENGTH",
+            `${lengthValue} ${toleranceValue}`
           );
 
-          baselineSetButton.addEventListener("click", () => {
-            const result = validateBaselineInputs();
-            if (!result) {
-              return;
-            }
-
-            const { lengthValue, toleranceValue } = result;
-
-            sendSentenceConfiguration(
-              "CONFIG HEADING LENGTH",
-              `${lengthValue} ${toleranceValue}`
+          try {
+            window.localStorage.setItem(
+              baselineStorageKey,
+              JSON.stringify({
+                length: lengthValue,
+                tolerance: toleranceValue,
+              })
             );
-
-            try {
-              window.localStorage.setItem(
-                baselineStorageKey,
-                JSON.stringify({
-                  length: lengthValue,
-                  tolerance: toleranceValue,
-                })
-              );
-            } catch (error) {
-              console.error("Failed to persist baseline config", error);
-            }
-          });
-        }
+          } catch (error) {
+            console.error("Failed to persist baseline config", error);
+          }
+        });
       }
+    }
 
-      function createPolarChartSVG() {
-        return `
+    function createPolarChartSVG() {
+      return `
           <svg width="350" height="350" viewBox="0 0 350 350">
             <!-- Grid circles -->
             <circle cx="175" cy="175" r="140" fill="none" stroke="#e0e0e0" stroke-width="1" />
@@ -1212,244 +1176,244 @@
             <g class="satellites"></g>
           </svg>
         `;
+    }
+
+    function isSatelliteUsedInFix(gnssSystem, satId) {
+      return satellitesUsed.some(
+        (usedSat) => usedSat.gnss === gnssSystem && usedSat.id === satId
+      );
+    }
+
+    function updatePolarChart() {
+      const polarContainer = document.getElementById("polarChart");
+      if (!polarContainer) return;
+
+      let satellitesGroup = polarContainer.querySelector(".satellites");
+
+      // If satellites group doesn't exist, create the entire SVG structure
+      if (!satellitesGroup) {
+        polarContainer.innerHTML = createPolarChartSVG();
+        satellitesGroup = polarContainer.querySelector(".satellites");
       }
 
-      function isSatelliteUsedInFix(gnssSystem, satId) {
-        return satellitesUsed.some(
-          (usedSat) => usedSat.gnss === gnssSystem && usedSat.id === satId
-        );
+      if (Object.keys(satelliteData).length === 0) {
+        if (satellitesGroup) {
+          satellitesGroup.innerHTML = "";
+        }
+        return;
       }
 
-      function updatePolarChart() {
-        const polarContainer = document.getElementById("polarChart");
-        if (!polarContainer) return;
+      let satelliteElements = "";
 
-        let satellitesGroup = polarContainer.querySelector(".satellites");
+      // Determine which antenna data to use based on visibility
+      const useSlaveData = !mainAntennaVisible && slaveAntennaVisible;
 
-        // If satellites group doesn't exist, create the entire SVG structure
-        if (!satellitesGroup) {
-          polarContainer.innerHTML = createPolarChartSVG();
-          satellitesGroup = polarContainer.querySelector(".satellites");
-        }
+      // Iterate through all GNSS systems and satellites
+      Object.keys(satelliteData).forEach((gnssSystem) => {
+        Object.keys(satelliteData[gnssSystem]).forEach((satId) => {
+          const satellite = satelliteData[gnssSystem][satId];
+          const antennaData = useSlaveData ? satellite.SLAVE : satellite.MAIN;
 
-        if (Object.keys(satelliteData).length === 0) {
-          if (satellitesGroup) {
-            satellitesGroup.innerHTML = "";
-          }
-          return;
-        }
+          // Only show satellites that have position data and SNR > 0 for selected antenna
+          if (
+            antennaData.azimuth !== null &&
+            antennaData.elevation !== null &&
+            typeof antennaData.azimuth === "number" &&
+            typeof antennaData.elevation === "number" &&
+            antennaData.SNR &&
+            antennaData.SNR > 0
+          ) {
+            // Convert from radians to degrees
+            const azimuthDeg = (antennaData.azimuth * 180) / Math.PI;
+            const elevationDeg = (antennaData.elevation * 180) / Math.PI;
 
-        let satelliteElements = "";
+            // Convert elevation to radius (90° = center, 0° = edge)
+            const elevationRadius = 140 - (elevationDeg / 90) * 140;
 
-        // Determine which antenna data to use based on visibility
-        const useSlaveData = !mainAntennaVisible && slaveAntennaVisible;
+            // Convert azimuth to angle (0° = North, clockwise)
+            const angleRad = ((azimuthDeg - 90) * Math.PI) / 180;
 
-        // Iterate through all GNSS systems and satellites
-        Object.keys(satelliteData).forEach((gnssSystem) => {
-          Object.keys(satelliteData[gnssSystem]).forEach((satId) => {
-            const satellite = satelliteData[gnssSystem][satId];
-            const antennaData = useSlaveData ? satellite.SLAVE : satellite.MAIN;
+            // Calculate position
+            const x = 175 + elevationRadius * Math.cos(angleRad);
+            const y = 175 + elevationRadius * Math.sin(angleRad);
 
-            // Only show satellites that have position data and SNR > 0 for selected antenna
-            if (
-              antennaData.azimuth !== null &&
-              antennaData.elevation !== null &&
-              typeof antennaData.azimuth === "number" &&
-              typeof antennaData.elevation === "number" &&
-              antennaData.SNR &&
-              antennaData.SNR > 0
-            ) {
-              // Convert from radians to degrees
-              const azimuthDeg = (antennaData.azimuth * 180) / Math.PI;
-              const elevationDeg = (antennaData.elevation * 180) / Math.PI;
+            // Use SNR-based color
+            const color = getSnrColor(antennaData.SNR);
+            const size = 6;
 
-              // Convert elevation to radius (90° = center, 0° = edge)
-              const elevationRadius = 140 - (elevationDeg / 90) * 140;
+            // Check if satellite is used in fix and get position type color for border
+            const isUsedInFix = isSatelliteUsedInFix(gnssSystem, satId);
+            const borderColor = isUsedInFix
+              ? getPositionTypeColor(positionType)
+              : "black";
+            const borderWidth = isUsedInFix ? "3" : "1";
 
-              // Convert azimuth to angle (0° = North, clockwise)
-              const angleRad = ((azimuthDeg - 90) * Math.PI) / 180;
-
-              // Calculate position
-              const x = 175 + elevationRadius * Math.cos(angleRad);
-              const y = 175 + elevationRadius * Math.sin(angleRad);
-
-              // Use SNR-based color
-              const color = getSnrColor(antennaData.SNR);
-              const size = 6;
-
-              // Check if satellite is used in fix and get position type color for border
-              const isUsedInFix = isSatelliteUsedInFix(gnssSystem, satId);
-              const borderColor = isUsedInFix
-                ? getPositionTypeColor(positionType)
-                : "black";
-              const borderWidth = isUsedInFix ? "3" : "1";
-
-              satelliteElements += `
+            satelliteElements += `
                 <circle class="satellite-circle" cx="${x}" cy="${y}" r="${size}" 
                         fill="${color}" stroke="${borderColor}" stroke-width="${borderWidth}" 
                         data-system="${gnssSystem}" data-sat="${satId}">
                   <title>${getGnssSystemName(
-                    gnssSystem
-                  )} ${satId}: ${antennaData.SNR.toFixed(
-                1
-              )}dB, Az:${azimuthDeg.toFixed(0)}°, El:${elevationDeg.toFixed(
-                0
-              )}°${isUsedInFix ? " (Used in Fix)" : ""}</title>
+              gnssSystem
+            )} ${satId}: ${antennaData.SNR.toFixed(
+              1
+            )}dB, Az:${azimuthDeg.toFixed(0)}°, El:${elevationDeg.toFixed(
+              0
+            )}°${isUsedInFix ? " (Used in Fix)" : ""}</title>
                 </circle>
                 <text class="satellite-text" x="${x}" y="${y - size - 3}" 
                       text-anchor="middle" font-size="10" fill="black" 
                       data-system="${gnssSystem}" data-sat="${satId}">${satId}</text>
               `;
-            }
-          });
+          }
         });
+      });
 
-        if (satellitesGroup) {
-          satellitesGroup.innerHTML = satelliteElements;
-        }
+      if (satellitesGroup) {
+        satellitesGroup.innerHTML = satelliteElements;
+      }
+    }
+
+    function updateSatelliteData(gnssSystem, antennaType, satellites) {
+      if (!satelliteData[gnssSystem]) {
+        satelliteData[gnssSystem] = {};
       }
 
-      function updateSatelliteData(gnssSystem, antennaType, satellites) {
-        if (!satelliteData[gnssSystem]) {
-          satelliteData[gnssSystem] = {};
+      // First, set all existing satellites for this system and antenna to null
+      Object.keys(satelliteData[gnssSystem]).forEach((satId) => {
+        if (!satelliteData[gnssSystem][satId][antennaType]) {
+          satelliteData[gnssSystem][satId][antennaType] = {};
         }
+        satelliteData[gnssSystem][satId][antennaType] = {
+          SNR: null,
+          azimuth: null,
+          elevation: null,
+          lastUpdate: Date.now(),
+        };
+      });
 
-        // First, set all existing satellites for this system and antenna to null
-        Object.keys(satelliteData[gnssSystem]).forEach((satId) => {
-          if (!satelliteData[gnssSystem][satId][antennaType]) {
-            satelliteData[gnssSystem][satId][antennaType] = {};
-          }
-          satelliteData[gnssSystem][satId][antennaType] = {
-            SNR: null,
-            azimuth: null,
-            elevation: null,
-            lastUpdate: Date.now(),
-          };
-        });
-
-        // Then update with new data
-        if (satellites && Array.isArray(satellites)) {
-          satellites.forEach((sat) => {
-            if (sat.id !== undefined) {
-              if (!satelliteData[gnssSystem][sat.id]) {
-                satelliteData[gnssSystem][sat.id] = {
-                  MAIN: {
-                    SNR: null,
-                    azimuth: null,
-                    elevation: null,
-                    lastUpdate: 0,
-                  },
-                  SLAVE: {
-                    SNR: null,
-                    azimuth: null,
-                    elevation: null,
-                    lastUpdate: 0,
-                  },
-                };
-              }
-
-              satelliteData[gnssSystem][sat.id][antennaType] = {
-                SNR: sat.SNR || null,
-                azimuth: sat.azimuth || null,
-                elevation: sat.elevation || null,
-                lastUpdate: Date.now(),
+      // Then update with new data
+      if (satellites && Array.isArray(satellites)) {
+        satellites.forEach((sat) => {
+          if (sat.id !== undefined) {
+            if (!satelliteData[gnssSystem][sat.id]) {
+              satelliteData[gnssSystem][sat.id] = {
+                MAIN: {
+                  SNR: null,
+                  azimuth: null,
+                  elevation: null,
+                  lastUpdate: 0,
+                },
+                SLAVE: {
+                  SNR: null,
+                  azimuth: null,
+                  elevation: null,
+                  lastUpdate: 0,
+                },
               };
             }
-          });
-        }
-      }
 
-      function cleanupSatelliteData() {
-        Object.keys(satelliteData).forEach((gnssSystem) => {
-          Object.keys(satelliteData[gnssSystem]).forEach((satId) => {
-            const satellite = satelliteData[gnssSystem][satId];
-            // Remove satellite if both antennas have null SNR
-            if (
-              (!satellite.MAIN.SNR || satellite.MAIN.SNR === null) &&
-              (!satellite.SLAVE.SNR || satellite.SLAVE.SNR === null)
-            ) {
-              delete satelliteData[gnssSystem][satId];
-            }
-          });
-
-          // Remove empty GNSS systems
-          if (Object.keys(satelliteData[gnssSystem]).length === 0) {
-            delete satelliteData[gnssSystem];
+            satelliteData[gnssSystem][sat.id][antennaType] = {
+              SNR: sat.SNR || null,
+              azimuth: sat.azimuth || null,
+              elevation: sat.elevation || null,
+              lastUpdate: Date.now(),
+            };
           }
         });
       }
+    }
 
-      function updateSatelliteChart() {
-        const chartContainerLeft =
-          document.getElementById("satelliteChartLeft");
-        const chartContainerRight = document.getElementById(
-          "satelliteChartRight"
-        );
-        if (!chartContainerLeft || !chartContainerRight) return;
-
-        if (Object.keys(satelliteData).length === 0) {
-          chartContainerLeft.innerHTML =
-            '<div style="color: #666; font-style: italic;">No satellite data available</div>';
-          chartContainerRight.innerHTML = "";
-          return;
-        }
-
-        const systemOrder = [
-          "GPS",
-          "GLONASS",
-          "Galileo",
-          "BeiDou",
-          "QZSS",
-          "NavIC",
-          "SBAS",
-        ];
-
-        // Sort GNSS systems by preferred order
-        const sortedSystems = Object.keys(satelliteData).sort((a, b) => {
-          const aIndex = systemOrder.indexOf(a);
-          const bIndex = systemOrder.indexOf(b);
-          const aSort = aIndex === -1 ? 999 : aIndex;
-          const bSort = bIndex === -1 ? 999 : bIndex;
-          return aSort - bSort;
-        });
-
-        // Define which systems go in which column
-        const leftColumnSystems = ["GPS", "Galileo", "GLONASS"];
-
-        let leftHtml = "";
-        let rightHtml = "";
-
-        // Generate HTML for both columns using sorted systems
-        sortedSystems.forEach((gnssSystem) => {
-          const satellites = satelliteData[gnssSystem];
-          if (satellites && Object.keys(satellites).length > 0) {
-            const systemHtml = generateSystemHtml(gnssSystem, satellites);
-
-            if (leftColumnSystems.includes(gnssSystem)) {
-              leftHtml += systemHtml;
-            } else {
-              rightHtml += systemHtml;
-            }
+    function cleanupSatelliteData() {
+      Object.keys(satelliteData).forEach((gnssSystem) => {
+        Object.keys(satelliteData[gnssSystem]).forEach((satId) => {
+          const satellite = satelliteData[gnssSystem][satId];
+          // Remove satellite if both antennas have null SNR
+          if (
+            (!satellite.MAIN.SNR || satellite.MAIN.SNR === null) &&
+            (!satellite.SLAVE.SNR || satellite.SLAVE.SNR === null)
+          ) {
+            delete satelliteData[gnssSystem][satId];
           }
         });
 
-        chartContainerLeft.innerHTML = leftHtml;
-        chartContainerRight.innerHTML = rightHtml;
+        // Remove empty GNSS systems
+        if (Object.keys(satelliteData[gnssSystem]).length === 0) {
+          delete satelliteData[gnssSystem];
+        }
+      });
+    }
+
+    function updateSatelliteChart() {
+      const chartContainerLeft =
+        document.getElementById("satelliteChartLeft");
+      const chartContainerRight = document.getElementById(
+        "satelliteChartRight"
+      );
+      if (!chartContainerLeft || !chartContainerRight) return;
+
+      if (Object.keys(satelliteData).length === 0) {
+        chartContainerLeft.innerHTML =
+          '<div style="color: #666; font-style: italic;">No satellite data available</div>';
+        chartContainerRight.innerHTML = "";
+        return;
       }
 
-      function generateSystemHtml(gnssSystem, satellites) {
-        const systemName = getGnssSystemName(gnssSystem);
+      const systemOrder = [
+        "GPS",
+        "GLONASS",
+        "Galileo",
+        "BeiDou",
+        "QZSS",
+        "NavIC",
+        "SBAS",
+      ];
 
-        // Sort satellites by ID
-        const sortedSatellites = Object.keys(satellites).sort(
-          (a, b) => parseInt(a) - parseInt(b)
-        );
+      // Sort GNSS systems by preferred order
+      const sortedSystems = Object.keys(satelliteData).sort((a, b) => {
+        const aIndex = systemOrder.indexOf(a);
+        const bIndex = systemOrder.indexOf(b);
+        const aSort = aIndex === -1 ? 999 : aIndex;
+        const bSort = bIndex === -1 ? 999 : bIndex;
+        return aSort - bSort;
+      });
 
-        if (sortedSatellites.length === 0) {
-          return "";
+      // Define which systems go in which column
+      const leftColumnSystems = ["GPS", "Galileo", "GLONASS"];
+
+      let leftHtml = "";
+      let rightHtml = "";
+
+      // Generate HTML for both columns using sorted systems
+      sortedSystems.forEach((gnssSystem) => {
+        const satellites = satelliteData[gnssSystem];
+        if (satellites && Object.keys(satellites).length > 0) {
+          const systemHtml = generateSystemHtml(gnssSystem, satellites);
+
+          if (leftColumnSystems.includes(gnssSystem)) {
+            leftHtml += systemHtml;
+          } else {
+            rightHtml += systemHtml;
+          }
         }
+      });
 
-        let html = `
+      chartContainerLeft.innerHTML = leftHtml;
+      chartContainerRight.innerHTML = rightHtml;
+    }
+
+    function generateSystemHtml(gnssSystem, satellites) {
+      const systemName = getGnssSystemName(gnssSystem);
+
+      // Sort satellites by ID
+      const sortedSatellites = Object.keys(satellites).sort(
+        (a, b) => parseInt(a) - parseInt(b)
+      );
+
+      if (sortedSatellites.length === 0) {
+        return "";
+      }
+
+      let html = `
           <div class="gnss-system-group" style="margin-bottom: 20px;">
             <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 5px;">
               ${systemName}
@@ -1457,27 +1421,27 @@
             <div class="satellites-container">
         `;
 
-        sortedSatellites.forEach((satId) => {
-          const satellite = satellites[satId];
-          const mainSNR = satellite.MAIN.SNR || 0;
-          const slaveSNR = satellite.SLAVE.SNR || 0;
+      sortedSatellites.forEach((satId) => {
+        const satellite = satellites[satId];
+        const mainSNR = satellite.MAIN.SNR || 0;
+        const slaveSNR = satellite.SLAVE.SNR || 0;
 
-          const mainWidth = Math.min(120, (mainSNR / 50) * 120);
-          const slaveWidth = Math.min(120, (slaveSNR / 50) * 120);
+        const mainWidth = Math.min(120, (mainSNR / 50) * 120);
+        const slaveWidth = Math.min(120, (slaveSNR / 50) * 120);
 
-          const mainColor = getSnrColor(mainSNR);
-          const slaveColor = getSnrColor(slaveSNR);
+        const mainColor = getSnrColor(mainSNR);
+        const slaveColor = getSnrColor(slaveSNR);
 
-          // Check if satellite is used in fix and get position type color for outline
-          const isUsedInFix = isSatelliteUsedInFix(gnssSystem, satId);
-          const outlineColor = isUsedInFix
-            ? getPositionTypeColor(positionType)
-            : "transparent";
-          const labelStyle = isUsedInFix
-            ? `border: 2px solid ${outlineColor}; padding: 1px 3px; border-radius: 6px; box-sizing: border-box;`
-            : "";
+        // Check if satellite is used in fix and get position type color for outline
+        const isUsedInFix = isSatelliteUsedInFix(gnssSystem, satId);
+        const outlineColor = isUsedInFix
+          ? getPositionTypeColor(positionType)
+          : "transparent";
+        const labelStyle = isUsedInFix
+          ? `border: 2px solid ${outlineColor}; padding: 1px 3px; border-radius: 6px; box-sizing: border-box;`
+          : "";
 
-          html += `
+        html += `
             <div class="satellite-item" style="margin: 8px 0; display: flex; align-items: center;" 
                  onmouseover="highlightSatellite('${gnssSystem}', '${satId}')" 
                  onmouseout="clearSatelliteHighlight()">
@@ -1485,17 +1449,15 @@
                 ${satId}
               </div>
               <div class="sat-bars" style="flex: 1;">
-                <div class="antenna-bar main-antenna-bar" style="display: ${
-                  mainAntennaVisible ? "flex" : "none"
-                }; align-items: center; margin: 1px 0;">
+                <div class="antenna-bar main-antenna-bar" style="display: ${mainAntennaVisible ? "flex" : "none"
+          }; align-items: center; margin: 1px 0;">
                   <div class="bar-fill" style="height: 12px; width: ${mainWidth}px; background-color: ${mainColor}; border-radius: 2px; min-width: 2px;"></div>
                   <div style="margin-left: 8px; font-size: 10px; color: #666; width: 40px;">
                     ${mainSNR > 0 ? mainSNR.toFixed(1) : "0.0"} dB
                   </div>
                 </div>
-                <div class="antenna-bar slave-antenna-bar" style="display: ${
-                  slaveAntennaVisible ? "flex" : "none"
-                }; align-items: center; margin: 1px 0;">
+                <div class="antenna-bar slave-antenna-bar" style="display: ${slaveAntennaVisible ? "flex" : "none"
+          }; align-items: center; margin: 1px 0;">
                   <div class="bar-fill" style="height: 12px; width: ${slaveWidth}px; background-color: ${slaveColor}; border-radius: 2px; min-width: 2px;"></div>
                   <div style="margin-left: 8px; font-size: 10px; color: #666; width: 40px;">
                     ${slaveSNR > 0 ? slaveSNR.toFixed(1) : "0.0"} dB
@@ -1504,168 +1466,168 @@
               </div>
             </div>
           `;
-        });
+      });
 
-        html += `
+      html += `
             </div>
           </div>
         `;
 
-        return html;
-      }
+      return html;
+    }
 
-      function highlightSatellite(gnssSystem, satId) {
-        // Hide satellites from other systems in polar chart
-        document.querySelectorAll(".satellite-circle").forEach((circle) => {
-          const circleSystem = circle.getAttribute("data-system");
-          const circleSat = circle.getAttribute("data-sat");
+    function highlightSatellite(gnssSystem, satId) {
+      // Hide satellites from other systems in polar chart
+      document.querySelectorAll(".satellite-circle").forEach((circle) => {
+        const circleSystem = circle.getAttribute("data-system");
+        const circleSat = circle.getAttribute("data-sat");
 
-          if (circleSystem === gnssSystem && circleSat === satId) {
-            // This is the target satellite - highlight it
-            circle.style.display = "block";
-            circle.style.opacity = "1";
-            circle.style.strokeWidth = "3";
-            circle.style.stroke = "#ff0000";
+        if (circleSystem === gnssSystem && circleSat === satId) {
+          // This is the target satellite - highlight it
+          circle.style.display = "block";
+          circle.style.opacity = "1";
+          circle.style.strokeWidth = "3";
+          circle.style.stroke = "#ff0000";
 
-            // Make it bigger
-            const currentRadius = parseFloat(circle.getAttribute("r"));
-            circle.setAttribute("data-original-r", currentRadius);
-            circle.setAttribute("r", currentRadius * 1.5);
-          } else if (circleSystem === gnssSystem) {
-            // Same system, different satellite - show but keep normal
-            circle.style.display = "block";
-            circle.style.opacity = "1";
-            circle.style.strokeWidth = "1";
-            circle.style.stroke = "black";
-          } else {
-            // Other systems - hide completely
-            circle.style.display = "none";
-          }
-        });
-
-        // Hide/show satellite text labels
-        document.querySelectorAll(".satellite-text").forEach((text) => {
-          const textSystem = text.getAttribute("data-system");
-          const textSat = text.getAttribute("data-sat");
-
-          if (textSystem === gnssSystem && textSat === satId) {
-            text.style.display = "block";
-            text.style.opacity = "1";
-            text.style.fontWeight = "bold";
-          } else if (textSystem === gnssSystem) {
-            // Same system, different satellite - show but keep normal
-            text.style.display = "block";
-            text.style.opacity = "1";
-            text.style.fontWeight = "normal";
-          } else {
-            // Other systems - hide completely
-            text.style.display = "none";
-          }
-        });
-
-        // Highlight the bar chart item
-        document.querySelectorAll(".satellite-item").forEach((item) => {
-          item.style.backgroundColor = "transparent";
-        });
-
-        // Find and highlight the current item
-        const currentItem = event.currentTarget;
-        currentItem.style.backgroundColor = "rgba(0, 123, 255, 0.1)";
-
-        // Update satellite info display
-        updateSatelliteInfoDisplay(gnssSystem, satId);
-      }
-
-      function clearSatelliteHighlight() {
-        // Restore all satellites in polar chart
-        document.querySelectorAll(".satellite-circle").forEach((circle) => {
+          // Make it bigger
+          const currentRadius = parseFloat(circle.getAttribute("r"));
+          circle.setAttribute("data-original-r", currentRadius);
+          circle.setAttribute("r", currentRadius * 1.5);
+        } else if (circleSystem === gnssSystem) {
+          // Same system, different satellite - show but keep normal
           circle.style.display = "block";
           circle.style.opacity = "1";
           circle.style.strokeWidth = "1";
           circle.style.stroke = "black";
+        } else {
+          // Other systems - hide completely
+          circle.style.display = "none";
+        }
+      });
 
-          // Restore original size
-          const originalRadius = circle.getAttribute("data-original-r");
-          if (originalRadius) {
-            circle.setAttribute("r", originalRadius);
-          }
-        });
+      // Hide/show satellite text labels
+      document.querySelectorAll(".satellite-text").forEach((text) => {
+        const textSystem = text.getAttribute("data-system");
+        const textSat = text.getAttribute("data-sat");
 
-        // Restore all satellite text labels
-        document.querySelectorAll(".satellite-text").forEach((text) => {
+        if (textSystem === gnssSystem && textSat === satId) {
+          text.style.display = "block";
+          text.style.opacity = "1";
+          text.style.fontWeight = "bold";
+        } else if (textSystem === gnssSystem) {
+          // Same system, different satellite - show but keep normal
           text.style.display = "block";
           text.style.opacity = "1";
           text.style.fontWeight = "normal";
-        });
+        } else {
+          // Other systems - hide completely
+          text.style.display = "none";
+        }
+      });
 
-        // Remove bar chart highlighting
-        document.querySelectorAll(".satellite-item").forEach((item) => {
-          item.style.backgroundColor = "transparent";
-        });
+      // Highlight the bar chart item
+      document.querySelectorAll(".satellite-item").forEach((item) => {
+        item.style.backgroundColor = "transparent";
+      });
 
-        // Clear satellite info display
-        clearSatelliteInfoDisplay();
+      // Find and highlight the current item
+      const currentItem = event.currentTarget;
+      currentItem.style.backgroundColor = "rgba(0, 123, 255, 0.1)";
+
+      // Update satellite info display
+      updateSatelliteInfoDisplay(gnssSystem, satId);
+    }
+
+    function clearSatelliteHighlight() {
+      // Restore all satellites in polar chart
+      document.querySelectorAll(".satellite-circle").forEach((circle) => {
+        circle.style.display = "block";
+        circle.style.opacity = "1";
+        circle.style.strokeWidth = "1";
+        circle.style.stroke = "black";
+
+        // Restore original size
+        const originalRadius = circle.getAttribute("data-original-r");
+        if (originalRadius) {
+          circle.setAttribute("r", originalRadius);
+        }
+      });
+
+      // Restore all satellite text labels
+      document.querySelectorAll(".satellite-text").forEach((text) => {
+        text.style.display = "block";
+        text.style.opacity = "1";
+        text.style.fontWeight = "normal";
+      });
+
+      // Remove bar chart highlighting
+      document.querySelectorAll(".satellite-item").forEach((item) => {
+        item.style.backgroundColor = "transparent";
+      });
+
+      // Clear satellite info display
+      clearSatelliteInfoDisplay();
+    }
+
+    function updateSatelliteInfoDisplay(gnssSystem, satId) {
+      const infoContent = document.getElementById("satelliteInfoContent");
+      if (!infoContent) return;
+
+      // Get satellite data for display
+      const satellite =
+        satelliteData[gnssSystem] && satelliteData[gnssSystem][satId];
+      if (!satellite) {
+        infoContent.innerHTML = `<div style="color: #dc3545;">No data available for ${gnssSystem} ${satId}</div>`;
+        return;
       }
 
-      function updateSatelliteInfoDisplay(gnssSystem, satId) {
-        const infoContent = document.getElementById("satelliteInfoContent");
-        if (!infoContent) return;
+      // Determine which antenna data to use
+      const useSlaveData = !mainAntennaVisible && slaveAntennaVisible;
+      const antennaData = useSlaveData ? satellite.SLAVE : satellite.MAIN;
+      const antennaLabel = useSlaveData ? "Slave" : "Main";
 
-        // Get satellite data for display
-        const satellite =
-          satelliteData[gnssSystem] && satelliteData[gnssSystem][satId];
-        if (!satellite) {
-          infoContent.innerHTML = `<div style="color: #dc3545;">No data available for ${gnssSystem} ${satId}</div>`;
-          return;
-        }
+      // Get signals information from satellitesUsed data
+      const usedSatellite = satellitesUsed.find(
+        (sat) => sat.gnss === gnssSystem && sat.id === satId
+      );
+      const signals =
+        usedSatellite && usedSatellite.signals ? usedSatellite.signals : [];
+      const isUsedInFix = signals.length > 0;
 
-        // Determine which antenna data to use
-        const useSlaveData = !mainAntennaVisible && slaveAntennaVisible;
-        const antennaData = useSlaveData ? satellite.SLAVE : satellite.MAIN;
-        const antennaLabel = useSlaveData ? "Slave" : "Main";
-
-        // Get signals information from satellitesUsed data
-        const usedSatellite = satellitesUsed.find(
-          (sat) => sat.gnss === gnssSystem && sat.id === satId
-        );
-        const signals =
-          usedSatellite && usedSatellite.signals ? usedSatellite.signals : [];
-        const isUsedInFix = signals.length > 0;
-
-        // Build display content
-        let html = `
+      // Build display content
+      let html = `
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <div style="font-weight: bold; color: #333;">
               ${getGnssSystemName(
-                gnssSystem
-              )} Satellite ${satId} (${antennaLabel} Antenna)
+        gnssSystem
+      )} Satellite ${satId} (${antennaLabel} Antenna)
             </div>
         `;
 
-        if (antennaData.SNR && antennaData.SNR > 0) {
-          html += `
+      if (antennaData.SNR && antennaData.SNR > 0) {
+        html += `
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
               <div><strong>SNR:</strong> ${antennaData.SNR.toFixed(1)} dB</div>
           `;
 
-          if (antennaData.azimuth !== null && antennaData.elevation !== null) {
-            const azimuthDeg = ((antennaData.azimuth * 180) / Math.PI).toFixed(
-              0
-            );
-            const elevationDeg = (
-              (antennaData.elevation * 180) /
-              Math.PI
-            ).toFixed(0);
-            html += `
+        if (antennaData.azimuth !== null && antennaData.elevation !== null) {
+          const azimuthDeg = ((antennaData.azimuth * 180) / Math.PI).toFixed(
+            0
+          );
+          const elevationDeg = (
+            (antennaData.elevation * 180) /
+            Math.PI
+          ).toFixed(0);
+          html += `
               <div><strong>Azimuth:</strong> ${azimuthDeg}°</div>
               <div><strong>Elevation:</strong> ${elevationDeg}°</div>
             `;
-          }
+        }
 
-          html += `</div>`;
+        html += `</div>`;
 
-          if (isUsedInFix) {
-            html += `
+        if (isUsedInFix) {
+          html += `
               <div style="color: #28a745; font-weight: bold;">
                 ✓ Used in Position Fix
               </div>
@@ -1673,921 +1635,938 @@
                 <strong>Signals Tracked:</strong> ${signals.join(", ")}
               </div>
             `;
-          } else {
-            html += `
+        } else {
+          html += `
               <div style="color: #6c757d;">
                 Not used in position fix
               </div>
             `;
-          }
-        } else {
-          html += `<div style="color: #dc3545;">No signal data available</div>`;
         }
-
-        html += `</div>`;
-        infoContent.innerHTML = html;
+      } else {
+        html += `<div style="color: #dc3545;">No signal data available</div>`;
       }
 
-      function clearSatelliteInfoDisplay() {
-        const infoContent = document.getElementById("satelliteInfoContent");
-        if (infoContent) {
-          infoContent.innerHTML =
-            "Hover over a satellite in the chart above to see details";
-          infoContent.style.color = "#666";
-        }
+      html += `</div>`;
+      infoContent.innerHTML = html;
+    }
+
+    function clearSatelliteInfoDisplay() {
+      const infoContent = document.getElementById("satelliteInfoContent");
+      if (infoContent) {
+        infoContent.innerHTML =
+          "Hover over a satellite in the chart above to see details";
+        infoContent.style.color = "#666";
+      }
+    }
+
+    function toggleAntenna(antennaType) {
+      const toggleButton = document.getElementById(antennaType + "Toggle");
+
+      // Update global state variable
+      if (antennaType === "main") {
+        mainAntennaVisible = !mainAntennaVisible;
+      } else if (antennaType === "slave") {
+        slaveAntennaVisible = !slaveAntennaVisible;
       }
 
-      function toggleAntenna(antennaType) {
-        const toggleButton = document.getElementById(antennaType + "Toggle");
+      // Update button appearance
+      const isVisible =
+        antennaType === "main" ? mainAntennaVisible : slaveAntennaVisible;
+      if (isVisible) {
+        // Show the bars
+        toggleButton.style.backgroundColor = "#007bff";
+        toggleButton.style.opacity = "1";
+      } else {
+        // Hide the bars
+        toggleButton.style.backgroundColor = "#6c757d";
+        toggleButton.style.opacity = "0.6";
+      }
 
-        // Update global state variable
-        if (antennaType === "main") {
-          mainAntennaVisible = !mainAntennaVisible;
-        } else if (antennaType === "slave") {
-          slaveAntennaVisible = !slaveAntennaVisible;
-        }
+      // Re-render the chart with new visibility state
+      updateSatelliteChart();
+      updatePolarChart();
+      updatePolarChartTitle();
+    }
 
-        // Update button appearance
-        const isVisible =
-          antennaType === "main" ? mainAntennaVisible : slaveAntennaVisible;
-        if (isVisible) {
-          // Show the bars
-          toggleButton.style.backgroundColor = "#007bff";
-          toggleButton.style.opacity = "1";
-        } else {
-          // Hide the bars
-          toggleButton.style.backgroundColor = "#6c757d";
-          toggleButton.style.opacity = "0.6";
-        }
+    function updatePolarChartTitle() {
+      const titleElement = document.getElementById("polarChartTitle");
+      if (!titleElement) return;
 
-        // Re-render the chart with new visibility state
+      if (mainAntennaVisible && slaveAntennaVisible) {
+        titleElement.textContent = "Satellite Positions (Main Antenna)";
+      } else if (mainAntennaVisible && !slaveAntennaVisible) {
+        titleElement.textContent = "Satellite Positions (Main Antenna)";
+      } else if (!mainAntennaVisible && slaveAntennaVisible) {
+        titleElement.textContent = "Satellite Positions (Slave Antenna)";
+      } else {
+        titleElement.textContent = "Satellite Positions (No Data)";
+      }
+    }
+
+    function startCleanupTimer() {
+      if (cleanupTimer) {
+        clearInterval(cleanupTimer);
+      }
+
+      // Clean up every minute
+      cleanupTimer = setInterval(() => {
+        cleanupSatelliteData();
         updateSatelliteChart();
         updatePolarChart();
-        updatePolarChartTitle();
-      }
+      }, 60000); // Every minute
+    }
 
-      function updatePolarChartTitle() {
-        const titleElement = document.getElementById("polarChartTitle");
-        if (!titleElement) return;
+    function connectWebSocket() {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/signalk/v1/stream?subscribe=none`;
 
-        if (mainAntennaVisible && slaveAntennaVisible) {
-          titleElement.textContent = "Satellite Positions (Main Antenna)";
-        } else if (mainAntennaVisible && !slaveAntennaVisible) {
-          titleElement.textContent = "Satellite Positions (Main Antenna)";
-        } else if (!mainAntennaVisible && slaveAntennaVisible) {
-          titleElement.textContent = "Satellite Positions (Slave Antenna)";
-        } else {
-          titleElement.textContent = "Satellite Positions (No Data)";
-        }
-      }
+      ws = new WebSocket(wsUrl);
 
-      function startCleanupTimer() {
-        if (cleanupTimer) {
-          clearInterval(cleanupTimer);
-        }
+      ws.onopen = function () {
+        document.getElementById("status").textContent = "Connected";
+        document.getElementById("status").className = "status connected";
 
-        // Clean up every minute
-        cleanupTimer = setInterval(() => {
-          cleanupSatelliteData();
-          updateSatelliteChart();
-          updatePolarChart();
-        }, 60000); // Every minute
-      }
+        // Subscribe to satellites in view and position for self vessel only
+        ws.send(
+          JSON.stringify({
+            context: "vessels.self",
+            subscribe: [
+              {
+                path: "navigation.gnss.satellitesInView",
+                period: 1000,
+              },
+              {
+                path: "navigation.gnss.satellitesUsed",
+                period: 1000,
+              },
+              {
+                path: "navigation.position",
+                period: 1000,
+                minPeriod: 500,
+              },
+              {
+                path: "navigation.headingTrue",
+                period: 1000,
+                minPeriod: 500,
+              },
+              {
+                path: "sensors.rtk.baselineLength",
+                period: 1000,
+                minPeriod: 500,
+              },
+              {
+                path: "sensors.rtk.positionType",
+                period: 1000,
+                minPeriod: 500,
+              },
+              {
+                path: "navigation.gnss.methodQuality",
+                period: 1000,
+                minPeriod: 500,
+              },
+              {
+                path: "navigation.gnss.horizontalDilution",
+                period: 1000,
+                minPeriod: 500,
+              },
+            ],
+          })
+        );
+      };
 
-      function connectWebSocket() {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/signalk/v1/stream?subscribe=none`;
+      ws.onmessage = function (event) {
+        const data = JSON.parse(event.data);
 
-        ws = new WebSocket(wsUrl);
+        if (data.updates) {
+          data.updates.forEach((update) => {
+            if (update.values && update.$source) {
+              let source = update.$source;
 
-        ws.onopen = function () {
-          document.getElementById("status").textContent = "Connected";
-          document.getElementById("status").className = "status connected";
+              update.values
+                .filter(
+                  (value) =>
+                    value.path === "sensors.rtk.positionType" &&
+                    value.value !== undefined
+                )
+                .forEach((value) => {
+                  positionType = value.value;
+                  updatePositionTypeDisplay();
+                  updatePositionMarkerColor();
+                });
 
-          // Subscribe to satellites in view and position for self vessel only
-          ws.send(
-            JSON.stringify({
-              context: "vessels.self",
-              subscribe: [
-                {
-                  path: "navigation.gnss.satellitesInView",
-                  period: 1000,
-                },
-                {
-                  path: "navigation.gnss.satellitesUsed",
-                  period: 1000,
-                },
-                {
-                  path: "navigation.position",
-                  period: 1000,
-                  minPeriod: 500,
-                },
-                {
-                  path: "navigation.headingTrue",
-                  period: 1000,
-                  minPeriod: 500,
-                },
-                {
-                  path: "sensors.rtk.baselineLength",
-                  period: 1000,
-                  minPeriod: 500,
-                },
-                {
-                  path: "sensors.rtk.positionType",
-                  period: 1000,
-                  minPeriod: 500,
-                },
-                {
-                  path: "navigation.gnss.methodQuality",
-                  period: 1000,
-                  minPeriod: 500,
-                },
-                {
-                  path: "navigation.gnss.horizontalDilution",
-                  period: 1000,
-                  minPeriod: 500,
-                },
-              ],
-            })
-          );
-        };
+              update.values.forEach((value) => {
+                if (value.path === "sensors.rtk.positionType") {
+                  return;
+                }
 
-        ws.onmessage = function (event) {
-          const data = JSON.parse(event.data);
+                if (
+                  value.path === "navigation.gnss.satellitesInView" &&
+                  value.value
+                ) {
+                  const gnssSystem = value.value.gnss;
+                  const antennaType = value.value.antennaType || "MAIN";
+                  const satellites = value.value.satellites;
 
-          if (data.updates) {
-            data.updates.forEach((update) => {
-              if (update.values && update.$source) {
-                let source = update.$source;
-
-                update.values
-                  .filter(
-                    (value) =>
-                      value.path === "sensors.rtk.positionType" &&
-                      value.value !== undefined
-                  )
-                  .forEach((value) => {
-                    positionType = value.value;
-                    updatePositionTypeDisplay();
-                    updatePositionMarkerColor();
-                  });
-
-                update.values.forEach((value) => {
-                  if (value.path === "sensors.rtk.positionType") {
-                    return;
-                  }
-
-                  if (
-                    value.path === "navigation.gnss.satellitesInView" &&
-                    value.value
-                  ) {
-                    const gnssSystem = value.value.gnss;
-                    const antennaType = value.value.antennaType || "MAIN";
-                    const satellites = value.value.satellites;
-
-                    if (gnssSystem) {
-                      updateSatelliteData(gnssSystem, antennaType, satellites);
-                      updateSatelliteChart();
-                      updatePolarChart();
-                    }
-                  } else if (
-                    value.path === "navigation.gnss.satellitesUsed" &&
-                    value.value
-                  ) {
-                    // Update satellites used in fix
-                    satellitesUsed = value.value.satellites || [];
+                  if (gnssSystem) {
+                    updateSatelliteData(gnssSystem, antennaType, satellites);
                     updateSatelliteChart();
                     updatePolarChart();
-                  } else if (
-                    value.path === "navigation.position" &&
-                    value.value
-                  ) {
-                    if (
-                      value.value.latitude !== undefined &&
-                      value.value.longitude !== undefined
-                    ) {
-                      // Values are already in degrees according to user
-                      const lat = value.value.latitude;
-                      const lon = value.value.longitude;
-
-                      // Validate coordinates
-                      if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
-                        updateMapPosition(lat, lon);
-                      }
-                    }
-                  } else if (
-                    value.path === "navigation.headingTrue" &&
-                    value.value !== undefined
-                  ) {
-                    // Heading is in radians
-                    currentHeading = value.value;
-                    headingTrue = (value.value * 180) / Math.PI; // Convert to degrees
-                    addHeadingToHistory(headingTrue, positionType);
-                    updateHeadingArrow();
-                    updateHeadingTrueDisplay();
-                  } else if (
-                    value.path === "sensors.rtk.baselineLength" &&
-                    value.value !== undefined
-                  ) {
-                    // Baseline length is in meters
-                    baselineLength = value.value;
-                    updateBaselineDisplay();
-                  } else if (
-                    value.path === "navigation.gnss.methodQuality" &&
-                    value.value !== undefined
-                  ) {
-                    // Method quality is a string
-                    methodQuality = value.value;
-                    updateMethodQualityDisplay();
-                  } else if (
-                    value.path === "navigation.gnss.horizontalDilution" &&
-                    value.value !== undefined
-                  ) {
-                    // Horizontal dilution is a numeric value
-                    horizontalDilution = value.value;
-                    updateHorizontalDilutionDisplay();
                   }
-                });
-              }
-            });
-          }
-        };
+                } else if (
+                  value.path === "navigation.gnss.satellitesUsed" &&
+                  value.value
+                ) {
+                  // Update satellites used in fix
+                  satellitesUsed = value.value.satellites || [];
+                  updateSatelliteChart();
+                  updatePolarChart();
+                } else if (
+                  value.path === "navigation.position" &&
+                  value.value
+                ) {
+                  if (
+                    value.value.latitude !== undefined &&
+                    value.value.longitude !== undefined
+                  ) {
+                    // Values are already in degrees according to user
+                    const lat = value.value.latitude;
+                    const lon = value.value.longitude;
 
-        ws.onclose = function () {
-          document.getElementById("status").textContent = "Disconnected";
-          document.getElementById("status").className = "status disconnected";
-
-          // Attempt to reconnect after 3 seconds
-          setTimeout(connectWebSocket, 3000);
-        };
-
-        ws.onerror = function (error) {
-          document.getElementById("status").textContent = "Connection error";
-          document.getElementById("status").className = "status disconnected";
-        };
-      }
-
-      // OpenLayers map functions
-      function initializeMap() {
-        // Create the map
-        map = new ol.Map({
-          target: "map",
-          layers: [
-            new ol.layer.Tile({
-              source: new ol.source.OSM(),
-            }),
-          ],
-          view: new ol.View({
-            center: ol.proj.fromLonLat(currentPosition), // [lon, lat]
-            zoom: 19,
-          }),
-        });
-
-        // Add scale control
-        scaleLineControl = new ol.control.ScaleLine({
-          units: "metric",
-          bar: true,
-          steps: 2,
-          minWidth: 80,
-        });
-        map.addControl(scaleLineControl);
-
-        // Remove default zoom control since we have custom buttons
-        map.getControls().forEach((control) => {
-          if (control instanceof ol.control.Zoom) {
-            map.removeControl(control);
-          }
-        });
-
-        // Create trail layer for position history
-        const trailSource = new ol.source.Vector();
-        trailLayer = new ol.layer.Vector({
-          source: trailSource,
-        });
-        map.addLayer(trailLayer);
-
-        // Create position marker (smaller than before)
-        const positionFeature = new ol.Feature({
-          geometry: new ol.geom.Point(ol.proj.fromLonLat(currentPosition)),
-        });
-
-        const positionStyle = new ol.style.Style({
-          image: new ol.style.Circle({
-            radius: 6, // Made smaller from 8
-            fill: new ol.style.Fill({
-              color: "#ff0000", // Will be updated dynamically based on position type
-            }),
-          }),
-        });
-
-        positionFeature.setStyle(positionStyle);
-
-        const vectorSource = new ol.source.Vector({
-          features: [positionFeature],
-        });
-
-        // Create heading arrow
-        const arrowCoord = ol.proj.fromLonLat(currentPosition);
-        const headingLine = new ol.geom.LineString([arrowCoord, arrowCoord]);
-
-        headingArrow = new ol.Feature({
-          geometry: headingLine,
-        });
-
-        const arrowStyle = new ol.style.Style({
-          stroke: new ol.style.Stroke({
-            color: "#0000ff",
-            width: 3,
-          }),
-        });
-
-        headingArrow.setStyle(arrowStyle);
-
-        vectorSource.addFeature(headingArrow);
-
-        const vectorLayer = new ol.layer.Vector({
-          source: vectorSource,
-        });
-
-        map.addLayer(vectorLayer);
-        positionMarker = positionFeature;
-      }
-
-      function updateMapPosition(lat, lon) {
-        if (!map || !positionMarker || !trailLayer) {
-          return;
-        }
-
-        const newPosition = [lon, lat]; // OpenLayers expects [lon, lat]
-        const newCoord = ol.proj.fromLonLat(newPosition);
-        const timestamp = Date.now();
-
-        // Add current position to trail history with position type color
-        positionTrail.push({
-          coordinates: newCoord,
-          timestamp: timestamp,
-          positionType: positionType,
-          color: getPositionTypeColor(positionType),
-        });
-
-        // Clean up old trail points
-        const cutoffTime = timestamp - maxTrailAge;
-        positionTrail = positionTrail.filter(
-          (point) => point.timestamp > cutoffTime
-        );
-
-        // Keep only the most recent points if we exceed maxTrailPoints
-        if (positionTrail.length > maxTrailPoints) {
-          positionTrail = positionTrail.slice(-maxTrailPoints);
-        }
-
-        // Update trail layer
-        updateTrailLayer();
-
-        // Update marker position
-        positionMarker.getGeometry().setCoordinates(newCoord);
-
-        // Save to IndexedDB every 3rd position update to avoid data loss
-        if (positionTrail.length % 3 === 0) {
-          savePositionHistory();
-        }
-
-        // Center map on new position
-        map.getView().setCenter(newCoord);
-
-        // Store current position
-        currentPosition = newPosition;
-
-        // Update heading arrow with new position
-        updateHeadingArrow();
-
-        // Update position marker color based on current position type
-        updatePositionMarkerColor();
-      }
-
-      function updatePositionMarkerColor() {
-        if (!positionMarker) {
-          return;
-        }
-
-        const color = getPositionTypeColor(positionType);
-
-        // Update the fill color of the position marker
-        const newStyle = new ol.style.Style({
-          image: new ol.style.Circle({
-            radius: 6,
-            fill: new ol.style.Fill({
-              color: color,
-            }),
-          }),
-        });
-
-        positionMarker.setStyle(newStyle);
-      }
-
-      function updateTrailLayer() {
-        if (!trailLayer || positionTrail.length === 0) {
-          return;
-        }
-
-        const trailSource = trailLayer.getSource();
-        trailSource.clear();
-
-        const now = Date.now();
-        const oldestTime = Math.min(...positionTrail.map((p) => p.timestamp));
-        const timeRange = now - oldestTime;
-
-        positionTrail.forEach((point, index) => {
-          // Calculate age-based opacity (newer = more opaque)
-          const age = now - point.timestamp;
-          const ageRatio = timeRange > 0 ? age / timeRange : 0;
-          const opacity = Math.max(0.1, 1 - ageRatio);
-
-          // Create trail dot feature
-          const trailFeature = new ol.Feature({
-            geometry: new ol.geom.Point(point.coordinates),
-          });
-
-          // Use position type color, fallback to red for older points without color data
-          const baseColor = point.color || "#FF0000"; // default red for old trail points
-
-          // Convert hex color to RGB for opacity
-          const hexToRgb = (hex) => {
-            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
-              hex
-            );
-            return result
-              ? {
-                  r: parseInt(result[1], 16),
-                  g: parseInt(result[2], 16),
-                  b: parseInt(result[3], 16),
+                    // Validate coordinates
+                    if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+                      updateMapPosition(lat, lon);
+                    }
+                  }
+                } else if (
+                  value.path === "navigation.headingTrue" &&
+                  value.value !== undefined
+                ) {
+                  // Heading is in radians
+                  currentHeading = value.value;
+                  headingTrue = (value.value * 180) / Math.PI; // Convert to degrees
+                  addHeadingToHistory(headingTrue, positionType);
+                  updateHeadingArrow();
+                  updateHeadingTrueDisplay();
+                } else if (
+                  value.path === "sensors.rtk.baselineLength" &&
+                  value.value !== undefined
+                ) {
+                  // Baseline length is in meters
+                  baselineLength = value.value;
+                  updateBaselineDisplay();
+                } else if (
+                  value.path === "navigation.gnss.methodQuality" &&
+                  value.value !== undefined
+                ) {
+                  // Method quality is a string
+                  methodQuality = value.value;
+                  updateMethodQualityDisplay();
+                } else if (
+                  value.path === "navigation.gnss.horizontalDilution" &&
+                  value.value !== undefined
+                ) {
+                  // Horizontal dilution is a numeric value
+                  horizontalDilution = value.value;
+                  updateHorizontalDilutionDisplay();
                 }
-              : { r: 255, g: 0, b: 0 }; // fallback red
-          };
-
-          const rgb = hexToRgb(baseColor);
-          const colorWithOpacity = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
-
-          // Style trail dot with age-based opacity and position type color
-          const trailStyle = new ol.style.Style({
-            image: new ol.style.Circle({
-              radius: 3,
-              fill: new ol.style.Fill({
-                color: colorWithOpacity,
-              }),
-            }),
+              });
+            }
           });
+        }
+      };
 
-          trailFeature.setStyle(trailStyle);
-          trailSource.addFeature(trailFeature);
+      ws.onclose = function () {
+        document.getElementById("status").textContent = "Disconnected";
+        document.getElementById("status").className = "status disconnected";
+
+        // Attempt to reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onerror = function (error) {
+        document.getElementById("status").textContent = "Connection error";
+        document.getElementById("status").className = "status disconnected";
+      };
+    }
+
+    // OpenLayers map functions
+    function initializeMap() {
+      // Create the map
+      map = new ol.Map({
+        target: "map",
+        layers: [
+          new ol.layer.Tile({
+            source: new ol.source.OSM(),
+          }),
+        ],
+        view: new ol.View({
+          center: ol.proj.fromLonLat(currentPosition), // [lon, lat]
+          zoom: 19,
+        }),
+      });
+
+      // Add scale control
+      scaleLineControl = new ol.control.ScaleLine({
+        units: "metric",
+        bar: true,
+        steps: 2,
+        minWidth: 80,
+      });
+      map.addControl(scaleLineControl);
+
+      // Remove default zoom control since we have custom buttons
+      map.getControls().forEach((control) => {
+        if (control instanceof ol.control.Zoom) {
+          map.removeControl(control);
+        }
+      });
+
+      // Create trail layer for position history
+      const trailSource = new ol.source.Vector();
+      trailLayer = new ol.layer.Vector({
+        source: trailSource,
+      });
+      map.addLayer(trailLayer);
+
+      // Create position marker (smaller than before)
+      const positionFeature = new ol.Feature({
+        geometry: new ol.geom.Point(ol.proj.fromLonLat(currentPosition)),
+      });
+
+      const positionStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 6, // Made smaller from 8
+          fill: new ol.style.Fill({
+            color: "#ff0000", // Will be updated dynamically based on position type
+          }),
+        }),
+      });
+
+      positionFeature.setStyle(positionStyle);
+
+      const vectorSource = new ol.source.Vector({
+        features: [positionFeature],
+      });
+
+      // Create heading arrow
+      const arrowCoord = ol.proj.fromLonLat(currentPosition);
+      const headingLine = new ol.geom.LineString([arrowCoord, arrowCoord]);
+
+      headingArrow = new ol.Feature({
+        geometry: headingLine,
+      });
+
+      const arrowStyle = new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: "#0000ff",
+          width: 3,
+        }),
+      });
+
+      headingArrow.setStyle(arrowStyle);
+
+      vectorSource.addFeature(headingArrow);
+
+      const vectorLayer = new ol.layer.Vector({
+        source: vectorSource,
+      });
+
+      map.addLayer(vectorLayer);
+      positionMarker = positionFeature;
+    }
+
+    function updateMapPosition(lat, lon) {
+      if (!map || !positionMarker || !trailLayer) {
+        return;
+      }
+
+      const newPosition = [lon, lat]; // OpenLayers expects [lon, lat]
+      const newCoord = ol.proj.fromLonLat(newPosition);
+      const timestamp = Date.now();
+
+      // Store current latitude and longitude
+      currentLatitude = lat;
+      currentLongitude = lon;
+
+      // Update latitude display
+      const latitudeElement = document.getElementById("latitude");
+      if (latitudeElement) {
+        latitudeElement.textContent = currentLatitude.toFixed(6);
+      }
+
+      // Update longitude display
+      const longitudeElement = document.getElementById("longitude");
+      if (longitudeElement) {
+        longitudeElement.textContent = currentLongitude.toFixed(6);
+      }
+
+      // Add current position to trail history with position type color
+      positionTrail.push({
+        coordinates: newCoord,
+        timestamp: timestamp,
+        positionType: positionType,
+        color: getPositionTypeColor(positionType),
+      });
+
+      // Clean up old trail points
+      const cutoffTime = timestamp - maxTrailAge;
+      positionTrail = positionTrail.filter(
+        (point) => point.timestamp > cutoffTime
+      );
+
+      // Keep only the most recent points if we exceed maxTrailPoints
+      if (positionTrail.length > maxTrailPoints) {
+        positionTrail = positionTrail.slice(-maxTrailPoints);
+      }
+
+      // Update trail layer
+      updateTrailLayer();
+
+      // Update marker position
+      positionMarker.getGeometry().setCoordinates(newCoord);
+
+      // Save to IndexedDB every 3rd position update to avoid data loss
+      if (positionTrail.length % 3 === 0) {
+        savePositionHistory();
+      }
+
+      // Center map on new position
+      map.getView().setCenter(newCoord);
+
+      // Store current position
+      currentPosition = newPosition;
+
+      // Update heading arrow with new position
+      updateHeadingArrow();
+
+      // Update position marker color based on current position type
+      updatePositionMarkerColor();
+    }
+
+    function updatePositionMarkerColor() {
+      if (!positionMarker) {
+        return;
+      }
+
+      const color = getPositionTypeColor(positionType);
+
+      // Update the fill color of the position marker
+      const newStyle = new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 6,
+          fill: new ol.style.Fill({
+            color: color,
+          }),
+        }),
+      });
+
+      positionMarker.setStyle(newStyle);
+    }
+
+    function updateTrailLayer() {
+      if (!trailLayer || positionTrail.length === 0) {
+        return;
+      }
+
+      const trailSource = trailLayer.getSource();
+      trailSource.clear();
+
+      const now = Date.now();
+      const oldestTime = Math.min(...positionTrail.map((p) => p.timestamp));
+      const timeRange = now - oldestTime;
+
+      positionTrail.forEach((point, index) => {
+        // Calculate age-based opacity (newer = more opaque)
+        const age = now - point.timestamp;
+        const ageRatio = timeRange > 0 ? age / timeRange : 0;
+        const opacity = Math.max(0.1, 1 - ageRatio);
+
+        // Create trail dot feature
+        const trailFeature = new ol.Feature({
+          geometry: new ol.geom.Point(point.coordinates),
         });
-      }
 
-      function updateHeadingArrow() {
-        if (
-          !headingArrow ||
-          headingTrue === null ||
-          headingTrue === undefined
-        ) {
-          return;
-        }
+        // Use position type color, fallback to red for older points without color data
+        const baseColor = point.color || "#FF0000"; // default red for old trail points
 
-        const currentCoord = ol.proj.fromLonLat(currentPosition);
-
-        // Calculate line length based on viewport - make it 1/4 of the viewport width
-        const view = map.getView();
-        const extent = view.calculateExtent(map.getSize());
-        const viewportWidth = extent[2] - extent[0]; // right - left
-        const arrowLength = viewportWidth * 0.25; // 25% of viewport width
-
-        // Convert heading from degrees to radians and adjust for map coordinates
-        // headingTrue is in degrees where 0° = North, clockwise positive
-        // For OpenLayers: 0° = East, so we subtract 90° and negate to correct direction
-        const bearing = (-(headingTrue - 90) * Math.PI) / 180;
-
-        // Calculate end point of arrow
-        const endCoord = [
-          currentCoord[0] + arrowLength * Math.cos(bearing),
-          currentCoord[1] + arrowLength * Math.sin(bearing),
-        ];
-
-        // Update the line geometry
-        const lineGeometry = headingArrow.getGeometry();
-        lineGeometry.setCoordinates([currentCoord, endCoord]);
-      }
-
-      function updateHeadingTrueDisplay() {
-        const headingElement = document.getElementById("headingTrue");
-        if (headingElement) {
-          if (headingTrue !== null && headingTrue !== undefined) {
-            headingElement.textContent = headingTrue.toFixed(1);
-          } else {
-            headingElement.textContent = "--";
-          }
-        }
-      }
-
-      function addHeadingToHistory(heading, samplePositionType) {
-        if (heading === null || heading === undefined) return;
-
-        const now = Date.now();
-
-        // Add new heading data with timestamp
-        headingHistory.push({
-          timestamp: now,
-          heading: heading,
-          positionType: samplePositionType || null,
-        });
-
-        // Remove old data (older than 5 minutes)
-        const cutoffTime = now - 5 * 60 * 1000;
-        headingHistory = headingHistory.filter(
-          (entry) => entry.timestamp > cutoffTime
-        );
-
-        // Limit array size as a safety measure
-        if (headingHistory.length > maxHeadingHistory) {
-          headingHistory = headingHistory.slice(-maxHeadingHistory);
-        }
-
-        // Update average every 15 seconds
-        if (now - lastHeadingAverageUpdate > headingAverageUpdateInterval) {
-          updateHeadingAverage();
-          lastHeadingAverageUpdate = now;
-        }
-
-        // Update the chart
-        updateHeadingChart();
-
-        // Save to IndexedDB every 5th heading update to avoid data loss
-        if (headingHistory.length % 5 === 0) {
-          saveHeadingHistory();
-        }
-      }
-
-      function updateHeadingAverage() {
-        if (headingHistory.length === 0) {
-          headingAverage = null;
-          return;
-        }
-
-        // Calculate average heading accounting for circular nature (0/360 degrees)
-        let sumSin = 0;
-        let sumCos = 0;
-
-        headingHistory.forEach((entry) => {
-          const radians = (entry.heading * Math.PI) / 180;
-          sumSin += Math.sin(radians);
-          sumCos += Math.cos(radians);
-        });
-
-        const avgRadians = Math.atan2(
-          sumSin / headingHistory.length,
-          sumCos / headingHistory.length
-        );
-        headingAverage = ((avgRadians * 180) / Math.PI + 360) % 360;
-      }
-
-      function updateHeadingChart() {
-        const chartElement = document.getElementById("headingChart");
-        if (!chartElement || headingHistory.length < 1) {
-          return;
-        }
-
-        const chartWidth = 360;
-        const chartHeight = 200;
-        const margin = { top: 20, right: 20, bottom: 30, left: 40 };
-        const plotWidth = chartWidth - margin.left - margin.right;
-        const plotHeight = chartHeight - margin.top - margin.bottom;
-
-        // Clear existing chart
-        chartElement.innerHTML = "";
-
-        // Create SVG
-        const svg = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "svg"
-        );
-        svg.setAttribute("width", chartWidth);
-        svg.setAttribute("height", chartHeight);
-
-        // Determine time range (last 5 minutes)
-        const now = Date.now();
-        const startTime = now - 5 * 60 * 1000;
-
-        // Filter and prepare data
-        const chartData = headingHistory.filter(
-          (entry) => entry.timestamp >= startTime
-        );
-        if (chartData.length < 1) return;
-
-        // Calculate Y-axis range from actual data
-        let centerValue =
-          headingAverage !== null ? headingAverage : chartData[0].heading;
-
-        // Find actual min and max values in the data, handling wrapping
-        let adjustedValues = chartData.map((entry) => {
-          let adjustedHeading = entry.heading;
-          if (Math.abs(entry.heading - centerValue) > 180) {
-            if (entry.heading < centerValue) {
-              adjustedHeading = entry.heading + 360;
-            } else {
-              adjustedHeading = entry.heading - 360;
-            }
-          }
-          return adjustedHeading;
-        });
-
-        const dataMin = Math.min(...adjustedValues);
-        const dataMax = Math.max(...adjustedValues);
-        const dataRange = dataMax - dataMin;
-
-        // Add 20% padding to the range, with minimum range of 10 degrees
-        const padding = Math.max(dataRange * 0.2, 5);
-        const minY = dataMin - padding;
-        const maxY = dataMax + padding;
-
-        // Create scales
-        const timeScale = (timestamp) =>
-          ((timestamp - startTime) / (5 * 60 * 1000)) * plotWidth;
-        const headingScale = (heading) => {
-          // Handle wrapping for heading values
-          let adjustedHeading = heading;
-          if (Math.abs(heading - centerValue) > 180) {
-            if (heading < centerValue) {
-              adjustedHeading = heading + 360;
-            } else {
-              adjustedHeading = heading - 360;
-            }
-          }
-          return (
-            plotHeight - ((adjustedHeading - minY) / (maxY - minY)) * plotHeight
+        // Convert hex color to RGB for opacity
+        const hexToRgb = (hex) => {
+          const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(
+            hex
           );
+          return result
+            ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+            }
+            : { r: 255, g: 0, b: 0 }; // fallback red
         };
 
-        // Draw grid lines
-        const gridGroup = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "g"
-        );
-        gridGroup.setAttribute("stroke", "#e0e0e0");
-        gridGroup.setAttribute("stroke-width", "1");
+        const rgb = hexToRgb(baseColor);
+        const colorWithOpacity = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
 
-        // Horizontal grid lines
-        for (let i = 0; i <= 4; i++) {
-          const y = margin.top + (plotHeight / 4) * i;
-          const line = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "line"
-          );
-          line.setAttribute("x1", margin.left);
-          line.setAttribute("y1", y);
-          line.setAttribute("x2", margin.left + plotWidth);
-          line.setAttribute("y2", y);
-          gridGroup.appendChild(line);
+        // Style trail dot with age-based opacity and position type color
+        const trailStyle = new ol.style.Style({
+          image: new ol.style.Circle({
+            radius: 3,
+            fill: new ol.style.Fill({
+              color: colorWithOpacity,
+            }),
+          }),
+        });
+
+        trailFeature.setStyle(trailStyle);
+        trailSource.addFeature(trailFeature);
+      });
+    }
+
+    function updateHeadingArrow() {
+      if (
+        !headingArrow ||
+        headingTrue === null ||
+        headingTrue === undefined
+      ) {
+        return;
+      }
+
+      const currentCoord = ol.proj.fromLonLat(currentPosition);
+
+      // Calculate line length based on viewport - make it 1/4 of the viewport width
+      const view = map.getView();
+      const extent = view.calculateExtent(map.getSize());
+      const viewportWidth = extent[2] - extent[0]; // right - left
+      const arrowLength = viewportWidth * 0.25; // 25% of viewport width
+
+      // Convert heading from degrees to radians and adjust for map coordinates
+      // headingTrue is in degrees where 0° = North, clockwise positive
+      // For OpenLayers: 0° = East, so we subtract 90° and negate to correct direction
+      const bearing = (-(headingTrue - 90) * Math.PI) / 180;
+
+      // Calculate end point of arrow
+      const endCoord = [
+        currentCoord[0] + arrowLength * Math.cos(bearing),
+        currentCoord[1] + arrowLength * Math.sin(bearing),
+      ];
+
+      // Update the line geometry
+      const lineGeometry = headingArrow.getGeometry();
+      lineGeometry.setCoordinates([currentCoord, endCoord]);
+    }
+
+    function updateHeadingTrueDisplay() {
+      const headingElement = document.getElementById("headingTrue");
+      if (headingElement) {
+        if (headingTrue !== null && headingTrue !== undefined) {
+          headingElement.textContent = headingTrue.toFixed(1);
+        } else {
+          headingElement.textContent = "--";
         }
+      }
+    }
 
-        // Vertical grid lines (every minute)
-        for (let i = 0; i <= 5; i++) {
-          const x = margin.left + (plotWidth / 5) * i;
-          const line = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "line"
-          );
-          line.setAttribute("x1", x);
-          line.setAttribute("y1", margin.top);
-          line.setAttribute("x2", x);
-          line.setAttribute("y2", margin.top + plotHeight);
-          gridGroup.appendChild(line);
+    function addHeadingToHistory(heading, samplePositionType) {
+      if (heading === null || heading === undefined) return;
+
+      const now = Date.now();
+
+      // Add new heading data with timestamp
+      headingHistory.push({
+        timestamp: now,
+        heading: heading,
+        positionType: samplePositionType || null,
+      });
+
+      // Remove old data (older than 5 minutes)
+      const cutoffTime = now - 5 * 60 * 1000;
+      headingHistory = headingHistory.filter(
+        (entry) => entry.timestamp > cutoffTime
+      );
+
+      // Limit array size as a safety measure
+      if (headingHistory.length > maxHeadingHistory) {
+        headingHistory = headingHistory.slice(-maxHeadingHistory);
+      }
+
+      // Update average every 15 seconds
+      if (now - lastHeadingAverageUpdate > headingAverageUpdateInterval) {
+        updateHeadingAverage();
+        lastHeadingAverageUpdate = now;
+      }
+
+      // Update the chart
+      updateHeadingChart();
+
+      // Save to IndexedDB every 5th heading update to avoid data loss
+      if (headingHistory.length % 5 === 0) {
+        saveHeadingHistory();
+      }
+    }
+
+    function updateHeadingAverage() {
+      if (headingHistory.length === 0) {
+        headingAverage = null;
+        return;
+      }
+
+      // Calculate average heading accounting for circular nature (0/360 degrees)
+      let sumSin = 0;
+      let sumCos = 0;
+
+      headingHistory.forEach((entry) => {
+        const radians = (entry.heading * Math.PI) / 180;
+        sumSin += Math.sin(radians);
+        sumCos += Math.cos(radians);
+      });
+
+      const avgRadians = Math.atan2(
+        sumSin / headingHistory.length,
+        sumCos / headingHistory.length
+      );
+      headingAverage = ((avgRadians * 180) / Math.PI + 360) % 360;
+    }
+
+    function updateHeadingChart() {
+      const chartElement = document.getElementById("headingChart");
+      if (!chartElement || headingHistory.length < 1) {
+        return;
+      }
+
+      const chartWidth = 360;
+      const chartHeight = 200;
+      const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+      const plotWidth = chartWidth - margin.left - margin.right;
+      const plotHeight = chartHeight - margin.top - margin.bottom;
+
+      // Clear existing chart
+      chartElement.innerHTML = "";
+
+      // Create SVG
+      const svg = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "svg"
+      );
+      svg.setAttribute("width", chartWidth);
+      svg.setAttribute("height", chartHeight);
+
+      // Determine time range (last 5 minutes)
+      const now = Date.now();
+      const startTime = now - 5 * 60 * 1000;
+
+      // Filter and prepare data
+      const chartData = headingHistory.filter(
+        (entry) => entry.timestamp >= startTime
+      );
+      if (chartData.length < 1) return;
+
+      // Calculate Y-axis range from actual data
+      let centerValue =
+        headingAverage !== null ? headingAverage : chartData[0].heading;
+
+      // Find actual min and max values in the data, handling wrapping
+      let adjustedValues = chartData.map((entry) => {
+        let adjustedHeading = entry.heading;
+        if (Math.abs(entry.heading - centerValue) > 180) {
+          if (entry.heading < centerValue) {
+            adjustedHeading = entry.heading + 360;
+          } else {
+            adjustedHeading = entry.heading - 360;
+          }
         }
-        svg.appendChild(gridGroup);
+        return adjustedHeading;
+      });
 
-        // Draw axes
-        const axisGroup = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "g"
+      const dataMin = Math.min(...adjustedValues);
+      const dataMax = Math.max(...adjustedValues);
+      const dataRange = dataMax - dataMin;
+
+      // Add 20% padding to the range, with minimum range of 10 degrees
+      const padding = Math.max(dataRange * 0.2, 5);
+      const minY = dataMin - padding;
+      const maxY = dataMax + padding;
+
+      // Create scales
+      const timeScale = (timestamp) =>
+        ((timestamp - startTime) / (5 * 60 * 1000)) * plotWidth;
+      const headingScale = (heading) => {
+        // Handle wrapping for heading values
+        let adjustedHeading = heading;
+        if (Math.abs(heading - centerValue) > 180) {
+          if (heading < centerValue) {
+            adjustedHeading = heading + 360;
+          } else {
+            adjustedHeading = heading - 360;
+          }
+        }
+        return (
+          plotHeight - ((adjustedHeading - minY) / (maxY - minY)) * plotHeight
         );
-        axisGroup.setAttribute("stroke", "#333");
-        axisGroup.setAttribute("stroke-width", "1");
+      };
 
-        // Y-axis
-        const yAxis = document.createElementNS(
+      // Draw grid lines
+      const gridGroup = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g"
+      );
+      gridGroup.setAttribute("stroke", "#e0e0e0");
+      gridGroup.setAttribute("stroke-width", "1");
+
+      // Horizontal grid lines
+      for (let i = 0; i <= 4; i++) {
+        const y = margin.top + (plotHeight / 4) * i;
+        const line = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "line"
         );
-        yAxis.setAttribute("x1", margin.left);
-        yAxis.setAttribute("y1", margin.top);
-        yAxis.setAttribute("x2", margin.left);
-        yAxis.setAttribute("y2", margin.top + plotHeight);
-        axisGroup.appendChild(yAxis);
+        line.setAttribute("x1", margin.left);
+        line.setAttribute("y1", y);
+        line.setAttribute("x2", margin.left + plotWidth);
+        line.setAttribute("y2", y);
+        gridGroup.appendChild(line);
+      }
 
-        // X-axis
-        const xAxis = document.createElementNS(
+      // Vertical grid lines (every minute)
+      for (let i = 0; i <= 5; i++) {
+        const x = margin.left + (plotWidth / 5) * i;
+        const line = document.createElementNS(
           "http://www.w3.org/2000/svg",
           "line"
         );
-        xAxis.setAttribute("x1", margin.left);
-        xAxis.setAttribute("y1", margin.top + plotHeight);
-        xAxis.setAttribute("x2", margin.left + plotWidth);
-        xAxis.setAttribute("y2", margin.top + plotHeight);
-        axisGroup.appendChild(xAxis);
+        line.setAttribute("x1", x);
+        line.setAttribute("y1", margin.top);
+        line.setAttribute("x2", x);
+        line.setAttribute("y2", margin.top + plotHeight);
+        gridGroup.appendChild(line);
+      }
+      svg.appendChild(gridGroup);
 
-        svg.appendChild(axisGroup);
+      // Draw axes
+      const axisGroup = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g"
+      );
+      axisGroup.setAttribute("stroke", "#333");
+      axisGroup.setAttribute("stroke-width", "1");
 
-        // Draw heading dots colored by position type
-        chartData.forEach((entry) => {
-          const x = margin.left + timeScale(entry.timestamp);
-          const y = margin.top + headingScale(entry.heading);
-          const dotColor = getPositionTypeColor(entry.positionType);
+      // Y-axis
+      const yAxis = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line"
+      );
+      yAxis.setAttribute("x1", margin.left);
+      yAxis.setAttribute("y1", margin.top);
+      yAxis.setAttribute("x2", margin.left);
+      yAxis.setAttribute("y2", margin.top + plotHeight);
+      axisGroup.appendChild(yAxis);
 
-          const circle = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "circle"
-          );
-          circle.setAttribute("cx", x);
-          circle.setAttribute("cy", y);
-          circle.setAttribute("r", "3");
-          circle.setAttribute("fill", dotColor);
-          circle.setAttribute(
-            "data-position-type",
-            entry.positionType || "UNKNOWN"
-          );
-          svg.appendChild(circle);
-        });
+      // X-axis
+      const xAxis = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line"
+      );
+      xAxis.setAttribute("x1", margin.left);
+      xAxis.setAttribute("y1", margin.top + plotHeight);
+      xAxis.setAttribute("x2", margin.left + plotWidth);
+      xAxis.setAttribute("y2", margin.top + plotHeight);
+      axisGroup.appendChild(xAxis);
 
-        // Draw average line if available
-        if (headingAverage !== null) {
-          const avgY = margin.top + headingScale(headingAverage);
-          const avgLine = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "line"
-          );
-          avgLine.setAttribute("x1", margin.left);
-          avgLine.setAttribute("y1", avgY);
-          avgLine.setAttribute("x2", margin.left + plotWidth);
-          avgLine.setAttribute("y2", avgY);
-          avgLine.setAttribute("stroke", "#ff0000");
-          avgLine.setAttribute("stroke-width", "1");
-          avgLine.setAttribute("stroke-dasharray", "5,5");
-          svg.appendChild(avgLine);
-        }
+      svg.appendChild(axisGroup);
 
-        // Add Y-axis labels
-        const labelGroup = document.createElementNS(
+      // Draw heading dots colored by position type
+      chartData.forEach((entry) => {
+        const x = margin.left + timeScale(entry.timestamp);
+        const y = margin.top + headingScale(entry.heading);
+        const dotColor = getPositionTypeColor(entry.positionType);
+
+        const circle = document.createElementNS(
           "http://www.w3.org/2000/svg",
-          "g"
+          "circle"
         );
-        labelGroup.setAttribute("font-family", "Arial, sans-serif");
-        labelGroup.setAttribute("font-size", "12");
-        labelGroup.setAttribute("text-anchor", "end");
-        labelGroup.setAttribute("fill", "#333");
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", y);
+        circle.setAttribute("r", "3");
+        circle.setAttribute("fill", dotColor);
+        circle.setAttribute(
+          "data-position-type",
+          entry.positionType || "UNKNOWN"
+        );
+        svg.appendChild(circle);
+      });
 
-        for (let i = 0; i <= 4; i++) {
-          const value = maxY - (i / 4) * (maxY - minY);
-          const y = margin.top + (plotHeight / 4) * i + 4;
-          const text = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "text"
-          );
-          text.setAttribute("x", margin.left - 5);
-          text.setAttribute("y", y);
-          text.textContent = value.toFixed(0) + "°";
-          labelGroup.appendChild(text);
-        }
-
-        // Add X-axis labels (time)
-        for (let i = 0; i <= 5; i++) {
-          const minutes = 5 - i;
-          const x = margin.left + (plotWidth / 5) * i;
-          const text = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "text"
-          );
-          text.setAttribute("x", x);
-          text.setAttribute("y", margin.top + plotHeight + 20);
-          text.setAttribute("text-anchor", "middle");
-          text.textContent = `-${minutes}m`;
-          labelGroup.appendChild(text);
-        }
-
-        svg.appendChild(labelGroup);
-        chartElement.appendChild(svg);
+      // Draw average line if available
+      if (headingAverage !== null) {
+        const avgY = margin.top + headingScale(headingAverage);
+        const avgLine = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "line"
+        );
+        avgLine.setAttribute("x1", margin.left);
+        avgLine.setAttribute("y1", avgY);
+        avgLine.setAttribute("x2", margin.left + plotWidth);
+        avgLine.setAttribute("y2", avgY);
+        avgLine.setAttribute("stroke", "#ff0000");
+        avgLine.setAttribute("stroke-width", "1");
+        avgLine.setAttribute("stroke-dasharray", "5,5");
+        svg.appendChild(avgLine);
       }
 
-      function updateBaselineDisplay() {
-        const baselineElement = document.getElementById("baselineLength");
-        if (baselineElement) {
-          if (baselineLength !== null && baselineLength !== undefined) {
-            baselineElement.textContent = baselineLength.toFixed(2);
-          } else {
-            baselineElement.textContent = "--";
-          }
-        }
+      // Add Y-axis labels
+      const labelGroup = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g"
+      );
+      labelGroup.setAttribute("font-family", "Arial, sans-serif");
+      labelGroup.setAttribute("font-size", "12");
+      labelGroup.setAttribute("text-anchor", "end");
+      labelGroup.setAttribute("fill", "#333");
+
+      for (let i = 0; i <= 4; i++) {
+        const value = maxY - (i / 4) * (maxY - minY);
+        const y = margin.top + (plotHeight / 4) * i + 4;
+        const text = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
+        text.setAttribute("x", margin.left - 5);
+        text.setAttribute("y", y);
+        text.textContent = value.toFixed(0) + "°";
+        labelGroup.appendChild(text);
       }
 
-      function updatePositionTypeDisplay() {
-        const positionTypeRows =
-          document.querySelectorAll(".position-type-row");
-
-        // Remove active class from all rows
-        positionTypeRows.forEach((row) => {
-          row.classList.remove("active");
-          row.style.borderColor = "transparent";
-        });
-
-        // If we have a current position type, highlight it
-        if (positionType !== null && positionType !== undefined) {
-          const activeRow = document.querySelector(
-            `[data-type="${positionType}"]`
-          );
-          if (activeRow) {
-            const color = getPositionTypeColor(positionType);
-            activeRow.classList.add("active");
-            activeRow.style.borderColor = color;
-          }
-        }
+      // Add X-axis labels (time)
+      for (let i = 0; i <= 5; i++) {
+        const minutes = 5 - i;
+        const x = margin.left + (plotWidth / 5) * i;
+        const text = document.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text"
+        );
+        text.setAttribute("x", x);
+        text.setAttribute("y", margin.top + plotHeight + 20);
+        text.setAttribute("text-anchor", "middle");
+        text.textContent = `-${minutes}m`;
+        labelGroup.appendChild(text);
       }
 
-      function updateMethodQualityDisplay() {
-        const methodQualityElement = document.getElementById("methodQuality");
-        if (methodQualityElement) {
-          if (methodQuality !== null && methodQuality !== undefined) {
-            methodQualityElement.textContent = methodQuality;
-          } else {
-            methodQualityElement.textContent = "--";
-          }
+      svg.appendChild(labelGroup);
+      chartElement.appendChild(svg);
+    }
+
+    function updateBaselineDisplay() {
+      const baselineElement = document.getElementById("baselineLength");
+      if (baselineElement) {
+        if (baselineLength !== null && baselineLength !== undefined) {
+          baselineElement.textContent = baselineLength.toFixed(2);
+        } else {
+          baselineElement.textContent = "--";
         }
       }
+    }
 
-      function updateHorizontalDilutionDisplay() {
-        const horizontalDilutionElement =
-          document.getElementById("horizontalDilution");
-        if (horizontalDilutionElement) {
-          if (horizontalDilution !== null && horizontalDilution !== undefined) {
-            horizontalDilutionElement.textContent =
-              horizontalDilution.toFixed(2);
-          } else {
-            horizontalDilutionElement.textContent = "--";
-          }
+    function updatePositionTypeDisplay() {
+      const positionTypeRows =
+        document.querySelectorAll(".position-type-row");
+
+      // Remove active class from all rows
+      positionTypeRows.forEach((row) => {
+        row.classList.remove("active");
+        row.style.borderColor = "transparent";
+      });
+
+      // If we have a current position type, highlight it
+      if (positionType !== null && positionType !== undefined) {
+        const activeRow = document.querySelector(
+          `[data-type="${positionType}"]`
+        );
+        if (activeRow) {
+          const color = getPositionTypeColor(positionType);
+          activeRow.classList.add("active");
+          activeRow.style.borderColor = color;
         }
       }
+    }
 
-      function zoomIn() {
-        if (map) {
-          const view = map.getView();
-          view.setZoom(view.getZoom() + 1);
+    function updateMethodQualityDisplay() {
+      const methodQualityElement = document.getElementById("methodQuality");
+      if (methodQualityElement) {
+        if (methodQuality !== null && methodQuality !== undefined) {
+          methodQualityElement.textContent = methodQuality;
+        } else {
+          methodQualityElement.textContent = "--";
         }
       }
+    }
 
-      function zoomOut() {
-        if (map) {
-          const view = map.getView();
-          view.setZoom(view.getZoom() - 1);
+    function updateHorizontalDilutionDisplay() {
+      const horizontalDilutionElement =
+        document.getElementById("horizontalDilution");
+      if (horizontalDilutionElement) {
+        if (horizontalDilution !== null && horizontalDilution !== undefined) {
+          horizontalDilutionElement.textContent =
+            horizontalDilution.toFixed(2);
+        } else {
+          horizontalDilutionElement.textContent = "--";
         }
       }
+    }
 
-      // Initialize map after DOM is ready
-      setTimeout(() => {
-        initializeMap();
-      }, 100);
+    function zoomIn() {
+      if (map) {
+        const view = map.getView();
+        view.setZoom(view.getZoom() + 1);
+      }
+    }
 
-      // Initialize IndexedDB and load stored data
-      initIndexedDB()
-        .then(async () => {
-          // Load stored histories
-          const storedPositions = await loadPositionHistory();
-          const storedHeadings = await loadHeadingHistory();
+    function zoomOut() {
+      if (map) {
+        const view = map.getView();
+        view.setZoom(view.getZoom() - 1);
+      }
+    }
 
-          if (storedPositions.length > 0) {
-            positionTrail = storedPositions;
-            updateTrailLayer();
-          }
+    // Initialize map after DOM is ready
+    setTimeout(() => {
+      initializeMap();
+    }, 100);
 
-          if (storedHeadings.length > 0) {
-            headingHistory = storedHeadings;
-            updateHeadingAverage();
-            updateHeadingChart();
-          }
+    // Initialize IndexedDB and load stored data
+    initIndexedDB()
+      .then(async () => {
+        // Load stored histories
+        const storedPositions = await loadPositionHistory();
+        const storedHeadings = await loadHeadingHistory();
 
-          // Set up periodic saving (every 30 seconds)
-          setInterval(saveHistoryPeriodically, 30000);
+        if (storedPositions.length > 0) {
+          positionTrail = storedPositions;
+          updateTrailLayer();
+        }
 
-          console.log(
-            `Loaded ${storedPositions.length} position points and ${storedHeadings.length} heading points from storage`
-          );
-        })
-        .catch((error) => {
-          console.error("Failed to initialize IndexedDB:", error);
-        });
+        if (storedHeadings.length > 0) {
+          headingHistory = storedHeadings;
+          updateHeadingAverage();
+          updateHeadingChart();
+        }
 
-      initTabNavigation();
-      initSettingsControls();
+        // Set up periodic saving (every 30 seconds)
+        setInterval(saveHistoryPeriodically, 30000);
 
-      // Start cleanup timer
-      startCleanupTimer();
-      updatePolarChartTitle();
+        console.log(
+          `Loaded ${storedPositions.length} position points and ${storedHeadings.length} heading points from storage`
+        );
+      })
+      .catch((error) => {
+        console.error("Failed to initialize IndexedDB:", error);
+      });
 
-      connectWebSocket();
-    </script>
-  </body>
+    initTabNavigation();
+    initSettingsControls();
+
+    // Start cleanup timer
+    startCleanupTimer();
+    updatePolarChartTitle();
+
+    connectWebSocket();
+  </script>
+</body>
+
 </html>
