@@ -621,6 +621,17 @@
         Set
       </button>
     </div>
+    <div class="system-group">
+      <h2>Antenna orientation</h2>
+      <div class="form-row">
+        <label for="antennaOrientationInput">Degrees</label>
+        <input type="number" id="antennaOrientationInput" min="0" max="359" step="1" value="0" />
+      </div>
+      <button id="antennaOrientationSetButton" class="tab-button" style="margin-top: 10px; align-self: flex-start"
+        disabled>
+        Set
+      </button>
+    </div>
   </div>
 
   <script>
@@ -633,6 +644,7 @@
 
     const pluginBaseUrl = `${window.location.origin}/plugins/tkurki-um982`;
     const baselineStorageKey = "baselineConfig";
+    const antennaOrientationStorageKey = "antennaOrientationConfig";
 
     // OpenLayers map variables
     let map = null;
@@ -1047,6 +1059,10 @@
         "baselineToleranceInput"
       );
       const baselineSetButton = document.getElementById("baselineSetButton");
+      const antennaOrientationInput = document.getElementById(
+        "antennaOrientationInput"
+      );
+      const antennaOrientationSetButton = document.getElementById("antennaOrientationSetButton");
 
       selects.forEach((select) => {
         select.addEventListener("change", () => {
@@ -1143,6 +1159,69 @@
             );
           } catch (error) {
             console.error("Failed to persist baseline config", error);
+          }
+        });
+      }
+
+      // Antenna Orientation functionality
+      if (
+        antennaOrientationInput instanceof HTMLInputElement &&
+        antennaOrientationSetButton instanceof HTMLButtonElement
+      ) {
+        const applyStoredAntennaOrientation = () => {
+          try {
+            const stored = window.localStorage.getItem(antennaOrientationStorageKey);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (typeof parsed.degrees === "number") {
+                antennaOrientationInput.value = String(parsed.degrees);
+              }
+            } else {
+              antennaOrientationInput.value = "0";
+            }
+          } catch (error) {
+            console.error("Failed to parse stored antenna orientation config", error);
+            antennaOrientationInput.value = "0";
+          }
+        };
+
+        const validateAntennaOrientationInput = () => {
+          const degreesValue = Number.parseInt(antennaOrientationInput.value, 10);
+          const isValid =
+            Number.isInteger(degreesValue) &&
+            degreesValue >= 0 &&
+            degreesValue <= 359;
+          antennaOrientationSetButton.disabled = !isValid;
+          return isValid ? { degreesValue } : null;
+        };
+
+        applyStoredAntennaOrientation();
+        validateAntennaOrientationInput();
+
+        antennaOrientationInput.addEventListener("input", validateAntennaOrientationInput);
+
+        antennaOrientationSetButton.addEventListener("click", () => {
+          const result = validateAntennaOrientationInput();
+          if (!result) {
+            return;
+          }
+
+          const { degreesValue } = result;
+
+          sendSentenceConfiguration(
+            "CONFIG HEADING OFFSET",
+            `${degreesValue}`
+          );
+
+          try {
+            window.localStorage.setItem(
+              antennaOrientationStorageKey,
+              JSON.stringify({
+                degrees: degreesValue,
+              })
+            );
+          } catch (error) {
+            console.error("Failed to persist antenna orientation config", error);
           }
         });
       }
