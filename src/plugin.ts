@@ -8,6 +8,8 @@ In theory, if the master is in front of the slave (and both are "pointed" in the
 then the heading reported will be same as a compass heading (adjusted true/mag).
 But it doesn't usually make sense to place the antennas in this position on a boat.
 I have master to port side of cabin top, aligned with mast, and slave to starboard.
+For now, I'm simply adding the offset to the reported heading from UNIHEADINGA.
+In the future, we should probably send CONFIG HEADING OFFSET to the UM-982 instead.
 */
 let globalAntennaOrientation: number = 0;
 
@@ -97,6 +99,30 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
         res.status(200).json({ status: 'queued', sentence, interval: intervalValue });
       });
+
+      router.post('/antenna-orientation/:degrees', (req: any, res: any) => {
+        const rawDegrees = req.params.degrees;
+
+        if (typeof rawDegrees !== 'string') {
+          res.status(400).json({ error: 'degrees parameter missing' });
+          return;
+        }
+
+        const degrees = Number.parseFloat(rawDegrees);
+
+        if (!Number.isFinite(degrees)) {
+          res.status(400).json({ error: 'degrees parameter must be a valid number' });
+          return;
+        }
+
+        // Update the global antenna orientation
+        globalAntennaOrientation = degrees;
+
+        res.status(200).json({
+          status: 'updated',
+          antennaOrientation: globalAntennaOrientation
+        });
+      });
     },
     schema: () => {
       const serialConnectionEnum = [...knownSerialPorts];
@@ -146,6 +172,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
       globalAntennaOrientation = config_.antennaOrientation ?? 0;
       app.setPluginError('');
       app.setPluginStatus('Starting');
+      // note that this config will only go to a serial-attached UM982, not one that's an SK Data Connection
       setTimeout(() => {
         serialWrite('MODE ROVER UAV')
         serialWrite('MODE')
@@ -403,31 +430,20 @@ const CONVERTERS = {
     { index: 3, path: 'sensors.rtk.positionType', convert: (v: string) => v },
     { index: 4, path: 'sensors.rtk.baselineLength', convert: (v: string) => parseFloat(v) },
     {
-      index: 5, path: 'navigation.headingTrue', convert: (v: string) => {
-        if (v === '0.0000') return null;
-        return ((parseFloat(v) + globalAntennaOrientation) % 360) * Math.PI / 180
+      index: 5, path: 'sensors.rtk.headingTrue', convert: (v: string) => {
+        if (v < '0.0') return null;
+        return (((parseFloat(v) + globalAntennaOrientation) % 360 + 360) % 360) * Math.PI / 180
       }
     },
-    // { index: 3, path: 'navigation.headingTruedeg', convert: (v: string) => parseFloat(v) + 90 },
     { index: 6, path: 'navigation.attitude.pitch', convert: (v: string) => parseFloat(v) * Math.PI / 180 },
     // 8 == heading std dev in docs
-    //{ index: 8, path: 'navigation.positionHdop', convert: (v: string) => parseFloat(v) },
     { index: 8, path: 'navigation.position.HDGstddev', convert: (v: string) => parseFloat(v) },
     // 9 == pitch std dev in docs
-    //{ index: 9, path: 'navigation.positionVdop', convert: (v: string) => parseFloat(v) },
     { index: 9, path: 'navigation.position.PITCHstddev', convert: (v: string) => parseFloat(v) },
     { index: 11, path: 'navigation.satellites.inView', convert: (v: string) => parseInt(v, 10) },
     { index: 12, path: 'navigation.satellites.used', convert: (v: string) => parseInt(v, 10) },
-    // 13 == 'number of satellites above elevation mask angle
-    //{ index: 13, path: 'navigation.satellites.GPS', convert: (v: string) => parseInt(v, 10) },
-    // 14 == 'number of sat with L2 above elevation mask angle
-    //{ index: 14, path: 'navigation.satellites.GLONASS', convert: (v: string) => parseInt(v, 10) },
-    // 15 == reserved
-    //{ index: 15, path: 'navigation.satellites.GALILEO', convert: (v: string) => parseInt(v, 10) },
     // 16 == extended solution status (7-88) verification, ionospheric correction
-    //{ index: 16, path: 'navigation.position.age', convert: (v: string) => parseFloat(v) },
     // 17 == GAL and BDS bitmask
-    //{ index: 17, path: 'navigation.position.dgpsAge', convert: (v: string) => parseFloat(v) }
     // 18 = GPS, GLON, BSD2 bitmask
     // leaving as string for now since these are bitmaps
     { index: 17, path: 'navigation.satellites.GAL-BDS', convert: (v: string) => v },

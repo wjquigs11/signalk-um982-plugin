@@ -625,7 +625,7 @@
       <h2>Antenna orientation</h2>
       <div class="form-row">
         <label for="antennaOrientationInput">Degrees</label>
-        <input type="number" id="antennaOrientationInput" min="0" max="359" step="1" value="0" />
+        <input type="number" id="antennaOrientationInput" min="-359" max="359" step="1" value="0" />
       </div>
       <button id="antennaOrientationSetButton" class="tab-button" style="margin-top: 10px; align-self: flex-start"
         disabled>
@@ -1189,7 +1189,7 @@
           const degreesValue = Number.parseInt(antennaOrientationInput.value, 10);
           const isValid =
             Number.isInteger(degreesValue) &&
-            degreesValue >= 0 &&
+            degreesValue >= -359 &&
             degreesValue <= 359;
           antennaOrientationSetButton.disabled = !isValid;
           return isValid ? { degreesValue } : null;
@@ -1200,7 +1200,7 @@
 
         antennaOrientationInput.addEventListener("input", validateAntennaOrientationInput);
 
-        antennaOrientationSetButton.addEventListener("click", () => {
+        antennaOrientationSetButton.addEventListener("click", async () => {
           const result = validateAntennaOrientationInput();
           if (!result) {
             return;
@@ -1208,12 +1208,19 @@
 
           const { degreesValue } = result;
 
-          sendSentenceConfiguration(
-            "CONFIG HEADING OFFSET",
-            `${degreesValue}`
-          );
-
           try {
+            const response = await fetch(`${pluginBaseUrl}/antenna-orientation/${degreesValue}`, {
+              method: "POST",
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+
+            const responseData = await response.json();
+            showSettingsFeedback(`Antenna orientation set to ${degreesValue}°.`);
+
+            // Store in localStorage for persistence
             window.localStorage.setItem(
               antennaOrientationStorageKey,
               JSON.stringify({
@@ -1221,7 +1228,9 @@
               })
             );
           } catch (error) {
-            console.error("Failed to persist antenna orientation config", error);
+            const message = error instanceof Error ? error.message : String(error);
+            console.error("Failed to set antenna orientation", error);
+            showSettingsFeedback(`Failed to set antenna orientation: ${message}`, true);
           }
         });
       }
