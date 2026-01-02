@@ -65,11 +65,9 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   // Discover NMEA0183 connections early so they're available in schema
   app.onPropertyValues('pipedprovider', (values) => {
     values.filter(v => v).forEach(({ value }) => {
-      console.log('UM982 Plugin: Discovered data provider:', value)
       if (value.type === 'Multiplexed' || value.type === 'NMEA0183') {
         if (knownNmeaConnections.indexOf(value.id) === -1) {
           knownNmeaConnections.push(value.id);
-          console.log('UM982 Plugin: Added NMEA connection:', value.id, 'Total connections:', knownNmeaConnections.length);
         }
       }
     })
@@ -135,12 +133,8 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
       };
     },
     schema: () => {
-      console.log('UM982 Plugin: Generating schema...');
       const serialConnectionEnum = [...knownSerialPorts];
       const nmeaConnectionEnum = [...knownNmeaConnections];
-      
-      console.log('UM982 Plugin: Known serial ports:', knownSerialPorts);
-      console.log('UM982 Plugin: Known NMEA connections:', knownNmeaConnections);
       
       if (serialConnectionEnum.length === 0) {
         serialConnectionEnum.push('No serial ports available');
@@ -193,7 +187,6 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
         result.properties.nmeaConnection.default = knownNmeaConnections[0];
       }
 
-      console.log('UM982 Plugin: Generated schema:', JSON.stringify(result, null, 2));
       return result
     },
     start: (config_: NtripConfig & { dataSource: 'serial' | 'nmea0183', serialconnection?: string, nmeaConnection?: string, ntripEnabled: boolean }) => {
@@ -561,43 +554,33 @@ const sample = [
 ]
 
 function validateConfiguration(obj: any): obj is Configuration {
-  console.log('UM982 Plugin: Validating configuration:', obj)
   if (!obj || typeof obj !== 'object') {
-    console.log('UM982 Plugin: Validation failed - not an object');
     return false;
   }
 
   // Handle migration from old configuration format
   if (!obj.dataSource) {
-    console.log('UM982 Plugin: Missing dataSource, assuming legacy serial configuration');
     obj.dataSource = 'serial';
   }
 
   // Validate data source selection
   if (typeof obj.dataSource !== 'string' || !['serial', 'nmea0183'].includes(obj.dataSource)) {
-    console.log('UM982 Plugin: Validation failed - invalid dataSource:', obj.dataSource);
     return false;
   }
 
-  console.log('UM982 Plugin: Data source is:', obj.dataSource);
-
   // Validate connection based on data source
   if (obj.dataSource === 'serial') {
-    console.log('UM982 Plugin: Validating serial connection:', obj.serialconnection);
     if (!obj.serialconnection ||
         typeof obj.serialconnection !== 'string' ||
         obj.serialconnection.trim() === '' ||
         obj.serialconnection === 'No serial ports available') {
-      console.log('UM982 Plugin: Validation failed - invalid serial connection');
       return false;
     }
   } else if (obj.dataSource === 'nmea0183') {
-    console.log('UM982 Plugin: Validating NMEA connection:', obj.nmeaConnection);
     if (!obj.nmeaConnection ||
         typeof obj.nmeaConnection !== 'string' ||
         obj.nmeaConnection.trim() === '' ||
         obj.nmeaConnection === 'No NMEA0183 connections available') {
-      console.log('UM982 Plugin: Validation failed - invalid NMEA connection');
       return false;
     }
   }
@@ -636,7 +619,6 @@ function validateConfiguration(obj: any): obj is Configuration {
     }
   }
 
-  console.log('UM982 Plugin: Configuration validation passed');
   return true;
 }
 
