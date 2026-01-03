@@ -636,6 +636,31 @@
       </button>
       <div id="settingsFeedback" class="settings-feedback"></div>
       <div class="system-group">
+        <h2>Antenna Orientation</h2>
+        <p style="margin: 0 0 15px 0; color: #555; font-size: 13px">
+          Configure the offset angle between your antenna orientation and the desired heading reference.
+          This compensates for the physical mounting angle of the antennas relative to your vessel's heading.
+        </p>
+        <div class="form-row">
+          <label for="antennaOrientationInput">Offset (degrees)</label>
+          <input
+            type="number"
+            id="antennaOrientationInput"
+            min="0"
+            max="359"
+            step="1"
+            value="0"
+          />
+        </div>
+        <button
+          id="antennaOrientationSetButton"
+          class="tab-button"
+          style="margin-top: 10px; align-self: flex-start"
+        >
+          Set Antenna Orientation
+        </button>
+      </div>
+      <div class="system-group">
         <h2>Baseline length (cm)</h2>
         <div class="form-row">
           <label for="baselineLengthInput">Length (cm)</label>
@@ -1076,6 +1101,12 @@
       function initSettingsControls() {
         const selects = document.querySelectorAll(".settings-select");
         const saveButton = document.getElementById("saveConfigButton");
+        const antennaOrientationInput = document.getElementById(
+          "antennaOrientationInput"
+        );
+        const antennaOrientationSetButton = document.getElementById(
+          "antennaOrientationSetButton"
+        );
         const baselineLengthInput = document.getElementById(
           "baselineLengthInput"
         );
@@ -1101,6 +1132,34 @@
         if (saveButton) {
           saveButton.addEventListener("click", () => {
             sendSentenceConfiguration("SAVECONFIG", null);
+          });
+        }
+
+        // Antenna orientation controls
+        if (antennaOrientationInput && antennaOrientationSetButton) {
+          antennaOrientationSetButton.addEventListener("click", async () => {
+            const degrees = parseInt(antennaOrientationInput.value, 10);
+            
+            if (isNaN(degrees) || degrees < 0 || degrees > 359) {
+              showSettingsFeedback("Please enter a valid angle between 0 and 359 degrees", true);
+              return;
+            }
+
+            try {
+              const response = await fetch(`${pluginBaseUrl}/antenna-orientation/${degrees}`, {
+                method: "POST",
+              });
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+
+              showSettingsFeedback(`Antenna orientation set to ${degrees}°`);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              console.error("Failed to set antenna orientation", error);
+              showSettingsFeedback(`Failed to set antenna orientation: ${message}`, true);
+            }
           });
         }
 
