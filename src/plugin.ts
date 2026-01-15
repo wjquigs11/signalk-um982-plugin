@@ -501,26 +501,28 @@ const bestSatParser = (parts: string[], sentence: string) => {
 
 const CONVERTERS = {
   UNIHEADINGA: [
-    { index: 0, path: 'sensors.rtk.solutionStatus', convert: (v: string) => v },
-    { index: 1, path: 'sensors.rtk.positionType', convert: (v: string) => v },
-    { index: 2, path: 'sensors.rtk.baselineLength', convert: (v: string) => parseFloat(v) },
+    { index: 2, path: 'sensors.rtk.solutionStatus', convert: (v: string) => v },
+    { index: 3, path: 'sensors.rtk.positionType', convert: (v: string) => v },
+    { index: 4, path: 'sensors.rtk.baselineLength', convert: (v: string) => parseFloat(v) },
     {
-      index: 3, path: 'navigation.headingTrue', convert: (v: string) => {
-        if (v === '0.0000') return null;
+      index: 5, path: 'navigation.headingTrue', convert: (v: string) => {
+        if (v < '0.0') return null;
         return (((parseFloat(v) + globalAntennaOrientation) % 360 + 360) % 360) * Math.PI / 180
       }
     },
-    // { index: 3, path: 'navigation.headingTruedeg', convert: (v: string) => parseFloat(v) + 90 },
-    { index: 4, path: 'navigation.attitude.pitch', convert: (v: string) => parseFloat(v) * Math.PI / 180 },
-    { index: 6, path: 'navigation.positionHdop', convert: (v: string) => parseFloat(v) },
-    { index: 7, path: 'navigation.positionVdop', convert: (v: string) => parseFloat(v) },
-    { index: 9, path: 'navigation.satellites.inView', convert: (v: string) => parseInt(v, 10) },
-    { index: 10, path: 'navigation.satellites.used', convert: (v: string) => parseInt(v, 10) },
-    { index: 11, path: 'navigation.satellites.GPS', convert: (v: string) => parseInt(v, 10) },
-    { index: 12, path: 'navigation.satellites.GLONASS', convert: (v: string) => parseInt(v, 10) },
-    { index: 13, path: 'navigation.satellites.GALILEO', convert: (v: string) => parseInt(v, 10) },
-    { index: 15, path: 'navigation.position.age', convert: (v: string) => parseFloat(v) },
-    { index: 16, path: 'navigation.position.dgpsAge', convert: (v: string) => parseFloat(v) }
+    { index: 6, path: 'navigation.attitude.pitch', convert: (v: string) => parseFloat(v) * Math.PI / 180 },
+    // 8 == heading std dev in docs
+    { index: 8, path: 'navigation.position.HDGstddev', convert: (v: string) => parseFloat(v) },
+    // 9 == pitch std dev in docs
+    { index: 9, path: 'navigation.position.PITCHstddev', convert: (v: string) => parseFloat(v) },
+    { index: 11, path: 'navigation.satellites.inView', convert: (v: string) => parseInt(v, 10) },
+    { index: 12, path: 'navigation.satellites.used', convert: (v: string) => parseInt(v, 10) },
+    // 16 == extended solution status (7-88) verification, ionospheric correction
+    // 17 == GAL and BDS bitmask
+    // 18 = GPS, GLON, BSD2 bitmask
+    // leaving as string for now since these are bitmaps
+    { index: 17, path: 'navigation.satellites.GAL-BDS', convert: (v: string) => v },
+    { index: 18, path: 'navigation.satellites.GPS-GLON', convert: (v: string) => v }
   ]
 }
 const POSITION_TYPE_INDEX = CONVERTERS.UNIHEADINGA.findIndex(c => c.path === 'sensors.rtk.positionType');
@@ -545,9 +547,12 @@ const uniheadingAParser = (parts: string[], sentence: string) => {
 
   console.log('UNIHEADINGA data fields:', dataFields);
 
+  // subtracting 2 from index->datafield mapping to be consistent with UM982 documentation for UNIHEADINGA
+  // field ID 1 is header
+  // field ID 2 is sol stat...
   const parsed = CONVERTERS.UNIHEADINGA.map(c => ({
     path: c.path,
-    value: c.convert(dataFields[c.index])
+    value: c.convert(dataFields[c.index - 2] || 'invalid')
   } as PathValue))
 
   console.log('UNIHEADINGA parsed values:', parsed);
