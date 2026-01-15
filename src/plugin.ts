@@ -6,8 +6,12 @@ export type Configuration = {
   serialDevice?: string;
   dataSource: 'serial' | 'nmea0183';
   nmeaConnection?: string;
+  antennaOrientation?: number;
 } & Omit<NtripOptions, 'xyz'> & Position
 
+
+// Global antenna orientation offset in degrees
+let globalAntennaOrientation = 0;
 
 const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   const selfContext = 'vessels.' + app.selfId;
@@ -20,7 +24,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   const updatePluginStatus = (config?: { dataSource?: 'serial' | 'nmea0183' }) => {
     let status = rtcmReceived ? `RTCM data received ${new Date(rtcmReceived).toLocaleTimeString()}` : 'No RTCM data received yet'
     let errorStatus = false
-    
+
     if (config?.dataSource === 'serial') {
       if (knownSerialPorts.length === 0) {
         errorStatus = true
@@ -42,7 +46,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
         status += 'No serial ports detected'
       }
     }
-    
+
     if (errorStatus) {
       app.setPluginError(status);
     } else {
@@ -84,7 +88,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
     description: 'Signal K plugin for Unicore UM982 GNSS receiver',
     registerWithRouter: (router: any) => {
       let currentConfig: any = null;
-      
+
       router.post('/send/:sentence/:interval?', (req: any, res: any) => {
         const rawSentence = req.params.sentence;
         const rawInterval = req.params.interval;
@@ -126,7 +130,31 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
         res.status(200).json({ status: 'queued', sentence, interval: intervalValue });
       });
-      
+
+      router.post('/antenna-orientation/:degrees', (req: any, res: any) => {
+        const rawDegrees = req.params.degrees;
+
+        if (typeof rawDegrees !== 'string') {
+          res.status(400).json({ error: 'degrees parameter missing' });
+          return;
+        }
+
+        const degrees = Number.parseFloat(rawDegrees);
+
+        if (!Number.isFinite(degrees)) {
+          res.status(400).json({ error: 'degrees parameter must be a valid number' });
+          return;
+        }
+
+        // Update the global antenna orientation
+        globalAntennaOrientation = degrees;
+
+        res.status(200).json({
+          status: 'updated',
+          antennaOrientation: globalAntennaOrientation
+        });
+      });
+
       // Store setter function for later use
       routerConfigSetter = (config: any) => {
         currentConfig = config;
@@ -135,14 +163,14 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
     schema: () => {
       const serialConnectionEnum = [...knownSerialPorts];
       const nmeaConnectionEnum = [...knownNmeaConnections];
-      
+
       if (serialConnectionEnum.length === 0) {
         serialConnectionEnum.push('No serial ports available');
       }
       if (nmeaConnectionEnum.length === 0) {
         nmeaConnectionEnum.push('No NMEA0183 connections available');
       }
-      
+
       const result: any = {
         properties: {
           dataSource: {
@@ -171,6 +199,14 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
             title: "NTRIP Enabled",
             default: true
           },
+          antennaOrientation: {
+            type: "number",
+            title: "Antenna Orientation (degrees)",
+            description: "Offset angle in degrees to add to heading measurements",
+            default: 0,
+            minimum: 0,
+            maximum: 359
+          },
           ...NtripOptionsSchema.properties,
         },
         required: ["dataSource"]
@@ -189,21 +225,24 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
       return result
     },
-    start: (config_: NtripConfig & { dataSource: 'serial' | 'nmea0183', serialconnection?: string, nmeaConnection?: string, ntripEnabled: boolean }) => {
+    start: (config_: NtripConfig & { dataSource: 'serial' | 'nmea0183', serialconnection?: string, nmeaConnection?: string, ntripEnabled: boolean, antennaOrientation?: number }) => {
       if (!validateConfiguration(config_)) {
         app.setPluginError('Invalid configuration');
         return;
       }
-      
+
       if (config_.dataSource === 'serial') {
         currentSerialConnection = config_.serialconnection;
       }
-      
+
+      // Initialize antenna orientation from configuration
+      globalAntennaOrientation = config_.antennaOrientation ?? 0;
+
       // Update router with current config
       if (routerConfigSetter) {
         routerConfigSetter(config_);
       }
-      
+
       app.setPluginError('');
       app.setPluginStatus('Starting');
       setTimeout(() => {
@@ -252,7 +291,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
       }, 1000);
       updatePluginStatus(config_);
-      
+
       // Set up NMEA data parsing for the selected connection (if using NMEA0183 data source)
       if (config_.dataSource === 'nmea0183' && config_.nmeaConnection) {
         app.onPropertyValues('pipedprovider', (values) => {
@@ -309,7 +348,7 @@ const parseNmeaSentence = (compleSentence: string, handleMessage: any) => {
   }
   // NOTE changed UNIHEADINGA parser to use 2nd param
   const values = parser(parts, compleSentence.split('*')[0]);
-  if (values.length) {    
+  if (values.length) {
     // console.log(sentence)
     // console.log(values)   
     handleMessage({
@@ -356,7 +395,7 @@ const modeParser = (parts: string[]) => [{
 const hprParser = (parts: string[]) => {
   return [{
     path: 'navigation.headingTrue',
-    value: (parseFloat(parts[2]) + 90) * Math.PI / 180
+    value: (((parseFloat(parts[2]) + globalAntennaOrientation) % 360 + 360) % 360) * Math.PI / 180
   }
   ] as PathValue[]
 }
@@ -468,7 +507,7 @@ const CONVERTERS = {
     {
       index: 3, path: 'navigation.headingTrue', convert: (v: string) => {
         if (v === '0.0000') return null;
-        return ((parseFloat(v) + 90) % 360) * Math.PI / 180
+        return (((parseFloat(v) + globalAntennaOrientation) % 360 + 360) % 360) * Math.PI / 180
       }
     },
     // { index: 3, path: 'navigation.headingTruedeg', convert: (v: string) => parseFloat(v) + 90 },
@@ -571,16 +610,16 @@ function validateConfiguration(obj: any): obj is Configuration {
   // Validate connection based on data source
   if (obj.dataSource === 'serial') {
     if (!obj.serialconnection ||
-        typeof obj.serialconnection !== 'string' ||
-        obj.serialconnection.trim() === '' ||
-        obj.serialconnection === 'No serial ports available') {
+      typeof obj.serialconnection !== 'string' ||
+      obj.serialconnection.trim() === '' ||
+      obj.serialconnection === 'No serial ports available') {
       return false;
     }
   } else if (obj.dataSource === 'nmea0183') {
     if (!obj.nmeaConnection ||
-        typeof obj.nmeaConnection !== 'string' ||
-        obj.nmeaConnection.trim() === '' ||
-        obj.nmeaConnection === 'No NMEA0183 connections available') {
+      typeof obj.nmeaConnection !== 'string' ||
+      obj.nmeaConnection.trim() === '' ||
+      obj.nmeaConnection === 'No NMEA0183 connections available') {
       return false;
     }
   }
