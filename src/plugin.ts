@@ -565,7 +565,6 @@ function validateConfiguration(obj: any): obj is Configuration {
       obj.longitude < -180 || obj.longitude > 180) {
       return false;
     }
-    "HEADING OFFSET X"
   }
 
   return true;
