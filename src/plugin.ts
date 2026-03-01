@@ -6,12 +6,7 @@ export type Configuration = {
   serialDevice?: string;
   dataSource: 'serial' | 'nmea0183';
   nmeaConnection?: string;
-  antennaOrientation?: number;
 } & Omit<NtripOptions, 'xyz'> & Position
-
-
-// Global antenna orientation offset in degrees
-let globalAntennaOrientation = 0;
 
 const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   const selfContext = 'vessels.' + app.selfId;
@@ -80,86 +75,11 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   let onStop = [] as (() => void)[];
 
   let currentSerialConnection: string | undefined = undefined
-  let routerConfigSetter: ((config: any) => void) | undefined = undefined
 
   return {
     id: 'tkurki-um982',
     name: 'Unicore UM982 GNSS Receiver',
     description: 'Signal K plugin for Unicore UM982 GNSS receiver',
-    registerWithRouter: (router: any) => {
-      let currentConfig: any = null;
-
-      router.post('/send/:sentence/:interval?', (req: any, res: any) => {
-        const rawSentence = req.params.sentence;
-        const rawInterval = req.params.interval;
-
-        if (typeof rawSentence !== 'string') {
-          res.status(400).json({ error: 'sentence parameter missing' });
-          return;
-        }
-
-        // Check if using NMEA0183 data source - commands cannot be sent
-        if (currentConfig && currentConfig.dataSource === 'nmea0183') {
-          res.status(400).json({
-            error: 'Cannot send commands when using NMEA0183 data source. Commands can only be sent via serial connection.'
-          });
-          return;
-        }
-
-        const sentence = decodeURIComponent(rawSentence);
-        const hasInterval = rawInterval !== undefined && rawInterval !== null && rawInterval !== '';
-
-        if (!hasInterval) {
-          serialWrite(sentence);
-          res.status(200).json({ status: 'queued', sentence, interval: null });
-          return;
-        }
-
-        const intervalValue = Number.parseFloat(rawInterval);
-
-        if (!Number.isFinite(intervalValue) || intervalValue <= 0) {
-          res.status(400).json({ error: 'interval parameter must be a positive number' });
-          return;
-        }
-
-        const intervalString = Number.isInteger(intervalValue)
-          ? intervalValue.toString()
-          : intervalValue.toString();
-
-        serialWrite(`${sentence} ${intervalString}`);
-
-        res.status(200).json({ status: 'queued', sentence, interval: intervalValue });
-      });
-
-      router.post('/antenna-orientation/:degrees', (req: any, res: any) => {
-        const rawDegrees = req.params.degrees;
-
-        if (typeof rawDegrees !== 'string') {
-          res.status(400).json({ error: 'degrees parameter missing' });
-          return;
-        }
-
-        const degrees = Number.parseFloat(rawDegrees);
-
-        if (!Number.isFinite(degrees)) {
-          res.status(400).json({ error: 'degrees parameter must be a valid number' });
-          return;
-        }
-
-        // Update the global antenna orientation
-        globalAntennaOrientation = degrees;
-
-        res.status(200).json({
-          status: 'updated',
-          antennaOrientation: globalAntennaOrientation
-        });
-      });
-
-      // Store setter function for later use
-      routerConfigSetter = (config: any) => {
-        currentConfig = config;
-      };
-    },
     schema: () => {
       const serialConnectionEnum = [...knownSerialPorts];
       const nmeaConnectionEnum = [...knownNmeaConnections];
@@ -199,14 +119,6 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
             title: "NTRIP Enabled",
             default: true
           },
-          antennaOrientation: {
-            type: "number",
-            title: "Antenna Orientation (degrees)",
-            description: "Offset angle in degrees to add to heading measurements",
-            default: 0,
-            minimum: 0,
-            maximum: 359
-          },
           ...NtripOptionsSchema.properties,
         },
         required: ["dataSource"]
@@ -225,7 +137,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
       return result
     },
-    start: (config_: NtripConfig & { dataSource: 'serial' | 'nmea0183', serialconnection?: string, nmeaConnection?: string, ntripEnabled: boolean, antennaOrientation?: number }) => {
+    start: (config_: NtripConfig & { dataSource: 'serial' | 'nmea0183', serialconnection?: string, nmeaConnection?: string, ntripEnabled: boolean }) => {
       if (!validateConfiguration(config_)) {
         app.setPluginError('Invalid configuration');
         return;
@@ -233,14 +145,6 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
       if (config_.dataSource === 'serial') {
         currentSerialConnection = config_.serialconnection;
-      }
-
-      // Initialize antenna orientation from configuration
-      globalAntennaOrientation = config_.antennaOrientation ?? 0;
-
-      // Update router with current config
-      if (routerConfigSetter) {
-        routerConfigSetter(config_);
       }
 
       app.setPluginError('');
@@ -395,7 +299,7 @@ const modeParser = (parts: string[]) => [{
 const hprParser = (parts: string[]) => {
   return [{
     path: 'navigation.headingTrue',
-    value: (((parseFloat(parts[2]) + globalAntennaOrientation) % 360 + 360) % 360) * Math.PI / 180
+    value: parseFloat(parts[2]) * Math.PI / 180
   }
   ] as PathValue[]
 }
@@ -507,7 +411,7 @@ const CONVERTERS = {
     {
       index: 5, path: 'navigation.headingTrue', convert: (v: string) => {
         if (v < '0.0') return null;
-        return (((parseFloat(v) + globalAntennaOrientation) % 360 + 360) % 360) * Math.PI / 180
+        return parseFloat(v) * Math.PI / 180
       }
     },
     { index: 6, path: 'navigation.attitude.pitch', convert: (v: string) => parseFloat(v) * Math.PI / 180 },
@@ -661,6 +565,7 @@ function validateConfiguration(obj: any): obj is Configuration {
       obj.longitude < -180 || obj.longitude > 180) {
       return false;
     }
+    "HEADING OFFSET X"
   }
 
   return true;
