@@ -36,7 +36,9 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   // Listen for serial ports
   app.onPropertyValues('serialport', (values) => {
     console.log('Serial ports:', values);
-    values.filter(v => v).forEach(({ value }) => {
+    values.forEach((item) => {
+      if (!item || !item.value) return;
+      const value = item.value as any;
       if (!knownSerialPorts.includes(value.id)) {
         knownSerialPorts.push(value.id);
       }
@@ -47,7 +49,9 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
   // Discover NMEA0183 connections early so they're available in schema
   app.onPropertyValues('pipedprovider', (values) => {
-    values.filter(v => v).forEach(({ value }) => {
+    values.forEach((item) => {
+      if (!item || !item.value) return;
+      const value = item.value as any;
       if (value.type === 'Multiplexed' || value.type === 'NMEA0183') {
         if (!knownNmeaConnections.includes(value.id)) {
           knownNmeaConnections.push(value.id);
@@ -66,8 +70,13 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
     name: 'Unicore UM982 GNSS Receiver',
     description: 'Signal K plugin for Unicore UM982 GNSS receiver',
     schema: () => {
-      // Combine all connections into a single list
-      const allConnections = [...knownSerialPorts, ...knownNmeaConnections];
+      // Combine all connections into a single list and remove duplicates
+      let allConnections = [...new Set([...knownSerialPorts, ...knownNmeaConnections])];
+
+      // Add current value to enum if not present
+      if (currentConnection && !allConnections.includes(currentConnection)) {
+        allConnections.unshift(currentConnection);
+      }
 
       if (allConnections.length === 0) {
         allConnections.push('No connections available');
@@ -82,7 +91,9 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
               ? 'You need to connect a serial port or NMEA0183 data source for a UM982 device first'
               : 'Select the serial port or NMEA0183 connection for the UM982 device',
             enum: allConnections,
-            default: undefined as string | undefined
+            default: allConnections.length > 0 && allConnections[0] !== 'No connections available'
+              ? allConnections[0]
+              : undefined
           },
           ntripEnabled: {
             type: "boolean",
@@ -93,14 +104,6 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
         },
         required: ["connection"]
       };
-
-      // Add current value to enum if not present
-      if (currentConnection && !allConnections.includes(currentConnection)) {
-        allConnections.unshift(currentConnection);
-      }
-      if (allConnections.length > 0 && allConnections[0] !== 'No connections available') {
-        result.properties.connection.default = allConnections[0];
-      }
 
       return result
     },
@@ -133,11 +136,11 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
       setTimeout(() => {
         // Only send configuration commands if using serial connection
         if (isSerialPort) {
-          serialWrite('MODE ROVER UAV')
-          serialWrite('MODE')
-          serialWrite('GPGSVH 1')
-          serialWrite('BESTSATA 1')
-          serialWrite('GPHPR 1')
+          //serialWrite('MODE ROVER UAV')
+          //serialWrite('MODE')
+          //serialWrite('GPGSVH 1')
+          //serialWrite('BESTSATA 1')
+          //serialWrite('GPHPR 1')
           // serialWrite('CONFIG HEADING LENGTH 138 10')
           serialWrite('CONFIG')
         }
@@ -180,7 +183,10 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
       // Set up NMEA data parsing for the selected connection (if using NMEA0183 data source)
       if (isNmeaConnection) {
         app.onPropertyValues('pipedprovider', (values) => {
-          values.filter(v => v && v.value.id === config_.connection).forEach(({ value }) => {
+          values.forEach((item) => {
+            if (!item || !item.value) return;
+            const value = item.value as any;
+            if (value.id !== config_.connection) return;
             console.log('Setting up NMEA parsing for connection:', value.id)
             if (value.type === 'Multiplexed') {
               (app as any).on(value.eventNames.received, (data: any) => {
