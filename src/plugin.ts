@@ -3,43 +3,26 @@ import { PathValue, Plugin, PluginConstructor, Position, ServerAPI } from '@sign
 import { NtripConfig, NtripOptions, NtripOptionsSchema, startRTCM } from './ntrip';
 
 export type Configuration = {
-  serialDevice?: string;
-  dataSource: 'serial' | 'nmea0183';
-  nmeaConnection?: string;
+  connection: string;
 } & Omit<NtripOptions, 'xyz'> & Position
 
 const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   const selfContext = 'vessels.' + app.selfId;
 
-  const knownNmeaConnections: any[] = []
+  const knownNmeaConnections: string[] = []
   const knownSerialPorts: string[] = []
+  const serialPortWriters = new Map<string, (data: any) => void>();
+  const nmeaConnectionIds = new Set<string>();
   let rtcmReceived: number | undefined = undefined
 
 
-  const updatePluginStatus = (config?: { dataSource?: 'serial' | 'nmea0183' }) => {
+  const updatePluginStatus = () => {
     let status = rtcmReceived ? `RTCM data received ${new Date(rtcmReceived).toLocaleTimeString()}` : 'No RTCM data received yet'
     let errorStatus = false
 
-    if (config?.dataSource === 'serial') {
-      if (knownSerialPorts.length === 0) {
-        errorStatus = true
-        status = 'No serial ports detected'
-      }
-    } else if (config?.dataSource === 'nmea0183') {
-      if (knownNmeaConnections.length === 0) {
-        errorStatus = true
-        status = 'No NMEA0183 data connections available'
-      }
-    } else {
-      // Default behavior when no config is provided (during initialization)
-      if (knownNmeaConnections.length === 0) {
-        errorStatus = true
-        status = 'No NMEA0183 data connections'
-      }
-      if (knownSerialPorts.length === 0) {
-        errorStatus = true
-        status += 'No serial ports detected'
-      }
+    if (knownSerialPorts.length === 0 && knownNmeaConnections.length === 0) {
+      errorStatus = true
+      status = 'No serial ports or NMEA0183 connections available'
     }
 
     if (errorStatus) {
@@ -50,14 +33,15 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
     }
   }
 
-  let serialWrite = (x: any) => undefined
+  // Listen for serial ports
   app.onPropertyValues('serialport', (values) => {
     console.log('Serial ports:', values);
     values.filter(v => v).forEach(({ value }) => {
       if (!knownSerialPorts.includes(value.id)) {
         knownSerialPorts.push(value.id);
       }
-      serialWrite = (data: any) => (app as any).emit(value.eventNames.toStdout, data);
+      const writer = (data: any) => (app as any).emit(value.eventNames.toStdout, data);
+      serialPortWriters.set(value.id, writer);
     })
   })
 
@@ -65,8 +49,9 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
   app.onPropertyValues('pipedprovider', (values) => {
     values.filter(v => v).forEach(({ value }) => {
       if (value.type === 'Multiplexed' || value.type === 'NMEA0183') {
-        if (knownNmeaConnections.indexOf(value.id) === -1) {
+        if (!knownNmeaConnections.includes(value.id)) {
           knownNmeaConnections.push(value.id);
+          nmeaConnectionIds.add(value.id);
         }
       }
     })
@@ -74,44 +59,29 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
   let onStop = [] as (() => void)[];
 
-  let currentSerialConnection: string | undefined = undefined
+  let currentConnection: string | undefined = undefined
 
   return {
     id: 'tkurki-um982',
     name: 'Unicore UM982 GNSS Receiver',
     description: 'Signal K plugin for Unicore UM982 GNSS receiver',
     schema: () => {
-      const serialConnectionEnum = [...knownSerialPorts];
-      const nmeaConnectionEnum = [...knownNmeaConnections];
+      // Combine all connections into a single list
+      const allConnections = [...knownSerialPorts, ...knownNmeaConnections];
 
-      if (serialConnectionEnum.length === 0) {
-        serialConnectionEnum.push('No serial ports available');
-      }
-      if (nmeaConnectionEnum.length === 0) {
-        nmeaConnectionEnum.push('No NMEA0183 connections available');
+      if (allConnections.length === 0) {
+        allConnections.push('No connections available');
       }
 
       const result: any = {
         properties: {
-          dataSource: {
+          connection: {
             type: "string",
-            title: "Data Source",
-            description: "Choose whether to connect via serial port or use existing NMEA0183 data connection",
-            enum: ["serial", "nmea0183"],
-            default: "serial"
-          },
-          serialconnection: {
-            type: "string",
-            title: "Serial Connection",
-            description: knownSerialPorts.length === 0 ? 'You need to connect a serial port for a UM982 device first' : 'Select the serial connection for the UM982 device',
-            enum: serialConnectionEnum,
-            default: undefined as string | undefined
-          },
-          nmeaConnection: {
-            type: "string",
-            title: "NMEA0183 Data Connection",
-            description: knownNmeaConnections.length === 0 ? 'No NMEA0183 data connections available' : 'Select the NMEA0183 data connection that provides UM982 data',
-            enum: nmeaConnectionEnum,
+            title: "Serial/NMEA Connection",
+            description: allConnections.length === 0 || allConnections[0] === 'No connections available'
+              ? 'You need to connect a serial port or NMEA0183 data source for a UM982 device first'
+              : 'Select the serial port or NMEA0183 connection for the UM982 device',
+            enum: allConnections,
             default: undefined as string | undefined
           },
           ntripEnabled: {
@@ -121,37 +91,48 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
           },
           ...NtripOptionsSchema.properties,
         },
-        required: ["dataSource"]
+        required: ["connection"]
       };
 
-      //add current value to enum if not present
-      if (currentSerialConnection && !knownSerialPorts.includes(currentSerialConnection)) {
-        serialConnectionEnum.unshift(currentSerialConnection);
+      // Add current value to enum if not present
+      if (currentConnection && !allConnections.includes(currentConnection)) {
+        allConnections.unshift(currentConnection);
       }
-      if (knownSerialPorts.length > 0) {
-        result.properties.serialconnection.default = knownSerialPorts[0];
-      }
-      if (knownNmeaConnections.length > 0) {
-        result.properties.nmeaConnection.default = knownNmeaConnections[0];
+      if (allConnections.length > 0 && allConnections[0] !== 'No connections available') {
+        result.properties.connection.default = allConnections[0];
       }
 
       return result
     },
-    start: (config_: NtripConfig & { dataSource: 'serial' | 'nmea0183', serialconnection?: string, nmeaConnection?: string, ntripEnabled: boolean }) => {
+    start: (config_: NtripConfig & { connection: string, ntripEnabled: boolean }) => {
       if (!validateConfiguration(config_)) {
         app.setPluginError('Invalid configuration');
         return;
       }
 
-      if (config_.dataSource === 'serial') {
-        currentSerialConnection = config_.serialconnection;
-      }
+      currentConnection = config_.connection;
+      const isSerialPort = knownSerialPorts.includes(config_.connection);
+      const isNmeaConnection = nmeaConnectionIds.has(config_.connection);
 
       app.setPluginError('');
       app.setPluginStatus('Starting');
+
+      // Set up the writer for the selected connection (if it's a serial port)
+      let serialWrite = (data: any) => {
+        console.log('No writable connection available');
+      };
+
+      if (isSerialPort) {
+        const writer = serialPortWriters.get(config_.connection);
+        if (writer) {
+          serialWrite = writer;
+          console.log('Serial writer configured for:', config_.connection);
+        }
+      }
+
       setTimeout(() => {
         // Only send configuration commands if using serial connection
-        if (config_.dataSource === 'serial') {
+        if (isSerialPort) {
           serialWrite('MODE ROVER UAV')
           serialWrite('MODE')
           serialWrite('GPGSVH 1')
@@ -168,7 +149,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
             options: config_,
             onData: (data: Buffer) => {
               // Only send RTCM data via serial if using serial connection
-              if (config_.dataSource === 'serial') {
+              if (isSerialPort) {
                 serialWrite(data)
               }
               rtcmReceived = Date.now()
@@ -184,7 +165,7 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
         }
 
         const updatePluginStatusTimer = setInterval(() => {
-          updatePluginStatus(config_)
+          updatePluginStatus()
         }, 1000)
         onStop.push(() => {
           clearInterval(updatePluginStatusTimer);
@@ -194,12 +175,12 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
         });
 
       }, 1000);
-      updatePluginStatus(config_);
+      updatePluginStatus();
 
       // Set up NMEA data parsing for the selected connection (if using NMEA0183 data source)
-      if (config_.dataSource === 'nmea0183' && config_.nmeaConnection) {
+      if (isNmeaConnection) {
         app.onPropertyValues('pipedprovider', (values) => {
-          values.filter(v => v && v.value.id === config_.nmeaConnection).forEach(({ value }) => {
+          values.filter(v => v && v.value.id === config_.connection).forEach(({ value }) => {
             console.log('Setting up NMEA parsing for connection:', value.id)
             if (value.type === 'Multiplexed') {
               (app as any).on(value.eventNames.received, (data: any) => {
@@ -506,31 +487,12 @@ function validateConfiguration(obj: any): obj is Configuration {
     return false;
   }
 
-  // Handle migration from old configuration format
-  if (!obj.dataSource) {
-    obj.dataSource = 'serial';
-  }
-
-  // Validate data source selection
-  if (typeof obj.dataSource !== 'string' || !['serial', 'nmea0183'].includes(obj.dataSource)) {
+  // Validate connection is provided
+  if (!obj.connection ||
+    typeof obj.connection !== 'string' ||
+    obj.connection.trim() === '' ||
+    obj.connection === 'No connections available') {
     return false;
-  }
-
-  // Validate connection based on data source
-  if (obj.dataSource === 'serial') {
-    if (!obj.serialconnection ||
-      typeof obj.serialconnection !== 'string' ||
-      obj.serialconnection.trim() === '' ||
-      obj.serialconnection === 'No serial ports available') {
-      return false;
-    }
-  } else if (obj.dataSource === 'nmea0183') {
-    if (!obj.nmeaConnection ||
-      typeof obj.nmeaConnection !== 'string' ||
-      obj.nmeaConnection.trim() === '' ||
-      obj.nmeaConnection === 'No NMEA0183 connections available') {
-      return false;
-    }
   }
 
   // Only validate NTRIP configuration if NTRIP is enabled
