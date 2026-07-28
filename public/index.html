@@ -594,6 +594,19 @@
     </button>
     <div id="settingsFeedback" class="settings-feedback"></div>
     <div class="system-group">
+      <h2>Heading Path</h2>
+      <p style="margin: 0 0 15px 0; color: #555; font-size: 13px">
+        The Signal K path where heading data is published. Change this to avoid conflicts with other heading sources.
+      </p>
+      <div class="form-row">
+        <label for="headingPathInput">Path</label>
+        <input type="text" id="headingPathInput" value="navigation.RTKheadingTrue" style="width: 250px;" />
+      </div>
+      <button id="headingPathSetButton" class="tab-button" style="margin-top: 10px; align-self: flex-start">
+        Set Path
+      </button>
+    </div>
+    <div class="system-group">
       <h2>Antenna Orientation</h2>
       <p style="margin: 0 0 15px 0; color: #555; font-size: 13px">
         Configure the offset angle between your antenna orientation and the desired heading reference.
@@ -1023,9 +1036,9 @@
 
         const summaryText =
           intervalValue === null
-            ? "disabled"
+            ? "sent"
             : `set to ${formatIntervalLabel(intervalValue)}`;
-        showSettingsFeedback(`Sentence ${sentence} ${summaryText}.`);
+        showSettingsFeedback(`${sentence} ${summaryText}.`);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : String(error);
@@ -1037,6 +1050,8 @@
     function initSettingsControls() {
       const selects = document.querySelectorAll(".settings-select");
       const saveButton = document.getElementById("saveConfigButton");
+      const headingPathInput = document.getElementById("headingPathInput");
+      const headingPathSetButton = document.getElementById("headingPathSetButton");
       const antennaOrientationInput = document.getElementById(
         "antennaOrientationInput"
       );
@@ -1068,6 +1083,44 @@
       if (saveButton) {
         saveButton.addEventListener("click", () => {
           sendSentenceConfiguration("SAVECONFIG", null);
+        });
+      }
+
+      // Heading path controls
+      if (headingPathInput && headingPathSetButton) {
+        // Load current heading path from plugin config
+        fetch(`${pluginBaseUrl}/heading-path`)
+          .then(response => response.ok ? response.json() : { path: "navigation.RTKheadingTrue" })
+          .then(data => {
+            headingPathInput.value = data.path || "navigation.RTKheadingTrue";
+          })
+          .catch(() => { /* keep default */ });
+
+        headingPathSetButton.addEventListener("click", async () => {
+          const path = headingPathInput.value.trim();
+
+          if (!path) {
+            showSettingsFeedback("Please enter a valid Signal K path", true);
+            return;
+          }
+
+          try {
+            const response = await fetch(`${pluginBaseUrl}/heading-path`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+
+            showSettingsFeedback(`Heading path set to ${path}. Restart plugin to apply.`);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error("Failed to set heading path", error);
+            showSettingsFeedback(`Failed to set heading path: ${message}`, true);
+          }
         });
       }
 

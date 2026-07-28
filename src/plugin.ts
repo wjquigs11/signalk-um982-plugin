@@ -100,6 +100,20 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
             title: "NTRIP Enabled",
             default: true
           },
+          antennaOrientation: {
+            type: "number",
+            title: "Antenna Orientation Offset (degrees)",
+            description: "Offset angle between antenna orientation and vessel heading. Sent to device on plugin start.",
+            default: 0,
+            minimum: 0,
+            maximum: 359
+          },
+          headingPath: {
+            type: "string",
+            title: "Heading Signal K Path",
+            description: "The Signal K path to publish heading data to.",
+            default: "navigation.RTKheadingTrue"
+          },
           ...NtripOptionsSchema.properties,
         },
         required: ["connection"]
@@ -107,13 +121,17 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
 
       return result
     },
-    start: (config_: NtripConfig & { connection: string, ntripEnabled: boolean }) => {
+    start: (config_: NtripConfig & { connection: string, ntripEnabled: boolean, antennaOrientation: number, headingPath: string }) => {
+      console.log('UM982 plugin start() called with connection:', config_.connection, 'ntripEnabled:', config_.ntripEnabled, 'antennaOrientation:', config_.antennaOrientation, 'headingPath:', config_.headingPath);
+
       if (!validateConfiguration(config_)) {
         app.setPluginError('Invalid configuration');
+        console.log('UM982 plugin: configuration validation failed');
         return;
       }
 
       currentConnection = config_.connection;
+      console.log('UM982 plugin: knownSerialPorts=', knownSerialPorts, 'knownNmeaConnections=', knownNmeaConnections);
       const isSerialPort = knownSerialPorts.includes(config_.connection);
       const isNmeaConnection = nmeaConnectionIds.has(config_.connection);
 
@@ -143,6 +161,14 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
           //serialWrite('GPHPR 1')
           // serialWrite('CONFIG HEADING LENGTH 138 10')
           serialWrite('CONFIG')
+
+          // Apply stored antenna orientation offset
+          const orientation = config_.antennaOrientation || 0;
+          if (orientation > 0) {
+            const cmd = `CONFIG HEADING OFFSET ${orientation}`;
+            console.log('Applying antenna orientation on start:', cmd);
+            serialWrite(cmd);
+          }
         }
 
         let closeRTCM: (() => void) | undefined = undefined;
@@ -181,30 +207,179 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
       updatePluginStatus();
 
       // Set up NMEA data parsing for the selected connection (if using NMEA0183 data source)
-      if (isNmeaConnection) {
-        app.onPropertyValues('pipedprovider', (values) => {
-          values.forEach((item) => {
-            if (!item || !item.value) return;
-            const value = item.value as any;
-            if (value.id !== config_.connection) return;
-            console.log('Setting up NMEA parsing for connection:', value.id)
-            if (value.type === 'Multiplexed') {
-              (app as any).on(value.eventNames.received, (data: any) => {
-                parseMultiplexedNmea(data.toString(), (delta: any) => app.handleMessage('N/A', delta));
-              })
-            } else if (value.type === 'NMEA0183') {
-              (app as any).on(value.eventNames.received, (data: any) => {
-                parseNmeaSentence(data.toString(), (delta: any) => app.handleMessage('N/A', delta));
-              })
+      // Always register the listener regardless of current nmeaConnectionIds state,
+      // because on fresh server start the pipedprovider values may not have arrived yet.
+      const headingPath = config_.headingPath || 'navigation.RTKheadingTrue';
+
+      // Publish metadata so Signal K knows the units for this path
+      app.handleMessage('N/A', {
+        updates: [{
+          meta: [{
+            path: headingPath as any,
+            value: {
+              units: 'rad',
+              description: 'True heading from UM982 RTK receiver'
             }
-          })
+          }]
+        }]
+      });
+
+      const emitDelta = (delta: any) => {
+        // Remap navigation.headingTrue to configured heading path
+        if (delta && delta.updates) {
+          delta.updates.forEach((update: any) => {
+            if (update.values) {
+              update.values.forEach((v: any) => {
+                if (v.path === 'navigation.headingTrue') {
+                  v.path = headingPath;
+                }
+              });
+            }
+          });
+        }
+        app.handleMessage('N/A', delta);
+      };
+
+      console.log('UM982 plugin: registering pipedprovider listener for connection:', config_.connection);
+      let nmeaListenerAttached = false;
+      app.onPropertyValues('pipedprovider', (values) => {
+        if (nmeaListenerAttached) return; // only attach once
+        console.log('UM982 plugin: pipedprovider values received, count:', values.length);
+        values.forEach((item) => {
+          if (!item || !item.value) return;
+          const value = item.value as any;
+          console.log('UM982 plugin: pipedprovider item: id=', value.id, 'type=', value.type, 'match=', value.id === config_.connection);
+          if (value.id !== config_.connection) return;
+          if (value.type !== 'Multiplexed' && value.type !== 'NMEA0183') return;
+          nmeaListenerAttached = true;
+          console.log('UM982 plugin: attaching NMEA parser for connection:', value.id, 'type:', value.type, 'eventNames:', JSON.stringify(value.eventNames));
+          if (value.type === 'Multiplexed') {
+            (app as any).on(value.eventNames.received, (data: any) => {
+              parseMultiplexedNmea(data.toString(), emitDelta);
+            })
+          } else if (value.type === 'NMEA0183') {
+            (app as any).on(value.eventNames.received, (data: any) => {
+              parseNmeaSentence(data.toString(), emitDelta);
+            })
+          }
         })
-      }
+      })
 
     },
     stop: () => {
       onStop.forEach(f => f());
       onStop = []
+    },
+    registerWithRouter: (router: any) => {
+      // Send a sentence/command to the UM982 device
+      router.post('/send/:sentence/:interval?', (req: any, res: any) => {
+        const { sentence, interval } = req.params;
+        const isSerialPort = currentConnection && knownSerialPorts.includes(currentConnection);
+
+        if (!isSerialPort) {
+          res.status(400).json({ error: 'No serial port connection active' });
+          return;
+        }
+
+        const writer = currentConnection ? serialPortWriters.get(currentConnection) : undefined;
+        if (!writer) {
+          res.status(500).json({ error: 'No writer available for current connection' });
+          return;
+        }
+
+        let command: string;
+        if (interval !== undefined && interval !== null) {
+          command = `${sentence} ${interval}`;
+        } else {
+          command = sentence;
+        }
+
+        console.log('Sending command to UM982:', command);
+        writer(command);
+        res.status(200).json({ ok: true, command });
+      });
+
+      // Set the antenna orientation offset
+      router.post('/antenna-orientation/:degrees', (req: any, res: any) => {
+        const degrees = parseInt(req.params.degrees, 10);
+
+        if (isNaN(degrees) || degrees < 0 || degrees > 359) {
+          res.status(400).json({ error: 'Invalid degrees value. Must be between 0 and 359.' });
+          return;
+        }
+
+        const isSerialPort = currentConnection && knownSerialPorts.includes(currentConnection);
+
+        if (!isSerialPort) {
+          res.status(400).json({ error: 'No serial port connection active' });
+          return;
+        }
+
+        const writer = currentConnection ? serialPortWriters.get(currentConnection) : undefined;
+        if (!writer) {
+          res.status(500).json({ error: 'No writer available for current connection' });
+          return;
+        }
+
+        const command = `CONFIG HEADING OFFSET ${degrees}`;
+        console.log('Setting antenna orientation:', command);
+        writer(command);
+
+        // Persist the orientation in plugin config
+        const options = app.readPluginOptions() as any;
+        if (options && options.configuration) {
+          options.configuration.antennaOrientation = degrees;
+          app.savePluginOptions(options, (err) => {
+            if (err) {
+              console.error('Failed to save antenna orientation to config:', err);
+            } else {
+              console.log('Antenna orientation saved to config:', degrees);
+            }
+          });
+        }
+
+        res.status(200).json({ ok: true, command });
+      });
+
+      // GET endpoint for current antenna orientation from config
+      router.get('/antenna-orientation', (req: any, res: any) => {
+        const options = app.readPluginOptions() as any;
+        const degrees = options?.configuration?.antennaOrientation || 0;
+        res.status(200).json({ degrees });
+      });
+
+      // GET endpoint for current heading path from config
+      router.get('/heading-path', (req: any, res: any) => {
+        const options = app.readPluginOptions() as any;
+        const path = options?.configuration?.headingPath || 'navigation.RTKheadingTrue';
+        res.status(200).json({ path });
+      });
+
+      // POST endpoint to set heading path in config
+      router.post('/heading-path', (req: any, res: any) => {
+        const { path } = req.body || {};
+
+        if (!path || typeof path !== 'string' || !path.trim()) {
+          res.status(400).json({ error: 'Invalid path value' });
+          return;
+        }
+
+        const options = app.readPluginOptions() as any;
+        if (options && options.configuration) {
+          options.configuration.headingPath = path.trim();
+          app.savePluginOptions(options, (err) => {
+            if (err) {
+              console.error('Failed to save heading path to config:', err);
+              res.status(500).json({ error: 'Failed to save configuration' });
+            } else {
+              console.log('Heading path saved to config:', path.trim());
+              res.status(200).json({ ok: true, path: path.trim() });
+            }
+          });
+        } else {
+          res.status(500).json({ error: 'Could not read plugin options' });
+        }
+      });
     }
   };
 };
@@ -215,8 +390,27 @@ const parseMultiplexedNmea = (multiplexedLine: string, handleMessage: any) => {
   parseNmeaSentence(sentence, handleMessage);
 }
 
+let lastHprDebugLog = 0;
+let lastHeadingDeltaLog = 0;
+
 const parseNmeaSentence = (compleSentence: string, handleMessage: any) => {
-  const parts = compleSentence.split(',')
+  // Handle multiplexed format: strip "timestamp;discriminator;" prefix if present
+  let sentence = compleSentence;
+  const semicolonIndex = sentence.indexOf(';');
+  if (semicolonIndex !== -1) {
+    // Check if this looks like a multiplexed line (starts with digits followed by semicolons)
+    const beforeFirstSemicolon = sentence.substring(0, semicolonIndex);
+    if (/^\d+$/.test(beforeFirstSemicolon)) {
+      // Strip timestamp and discriminator: "1784823970055;N;$GNHPR,..." -> "$GNHPR,..."
+      const afterTimestamp = sentence.substring(semicolonIndex + 1);
+      const secondSemicolon = afterTimestamp.indexOf(';');
+      if (secondSemicolon !== -1) {
+        sentence = afterTimestamp.substring(secondSemicolon + 1).trim();
+      }
+    }
+  }
+
+  const parts = sentence.split(',')
   let parser = (_s: string[], sentence: string) => [] as PathValue[];
   switch (parts[0]) {
     case '#UNIHEADINGA':
@@ -238,10 +432,32 @@ const parseNmeaSentence = (compleSentence: string, handleMessage: any) => {
       return;
   }
   // NOTE changed UNIHEADINGA parser to use 2nd param
-  const values = parser(parts, compleSentence.split('*')[0]);
+  const values = parser(parts, sentence.split('*')[0]);
+
+  // Throttled debug logging for HPR parsing (max once per 10 seconds)
+  if (parts[0] === '$GNHPR') {
+    const now = Date.now();
+    if (now - lastHprDebugLog >= 10000) {
+      lastHprDebugLog = now;
+      if (values.length) {
+        console.log('HPR parsed successfully:', JSON.stringify(values));
+      } else {
+        console.log('HPR parse returned no values from:', sentence);
+      }
+    }
+  }
+
   if (values.length) {
-    // console.log(sentence)
-    // console.log(values)   
+    // Throttled debug logging for heading delta emission (max once per 10 seconds)
+    const headingValue = values.find((v: PathValue) => v.path === 'navigation.headingTrue');
+    if (headingValue) {
+      const now = Date.now();
+      if (now - lastHeadingDeltaLog >= 10000) {
+        lastHeadingDeltaLog = now;
+        console.log('Sending navigation.headingTrue to SignalK:', JSON.stringify(headingValue), 'from sentence type:', parts[0]);
+      }
+    }
+
     handleMessage({
       updates: [{
         values
