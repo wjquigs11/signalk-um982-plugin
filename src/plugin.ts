@@ -146,7 +146,12 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
       if (isSerialPort) {
         const writer = serialPortWriters.get(config_.connection);
         if (writer) {
-          serialWrite = writer;
+          serialWrite = (data: any) => {
+            if (typeof data === 'string') {
+              console.log('UM982 serial command:', data);
+            }
+            writer(data);
+          };
           console.log('Serial writer configured for:', config_.connection);
         }
       }
@@ -156,10 +161,11 @@ const pluginFactory: PluginConstructor = function (app: ServerAPI): Plugin {
         if (isSerialPort) {
           //serialWrite('MODE ROVER UAV')
           //serialWrite('MODE')
-          //serialWrite('GPGSVH 1')
           //serialWrite('BESTSATA 1')
           //serialWrite('GPHPR 1')
           // serialWrite('CONFIG HEADING LENGTH 138 10')
+          serialWrite('GPGSV 20')
+          serialWrite('GPGSVH 20')
           serialWrite('CONFIG')
 
           // Apply stored antenna orientation offset
@@ -412,7 +418,22 @@ const parseNmeaSentence = (compleSentence: string, handleMessage: any) => {
 
   const parts = sentence.split(',')
   let parser = (_s: string[], sentence: string) => [] as PathValue[];
-  switch (parts[0]) {
+
+  // Handle GSV/GSVH sentences (satellites in view for main/slave antenna)
+  const sentenceId = parts[0];
+  if (sentenceId && (sentenceId.match(/^\$G[A-Z]GSV$/) || sentenceId.match(/^\$G[A-Z]GSVH$/))) {
+    const gsvValues = gsvParser(parts, sentenceId);
+    if (gsvValues.length) {
+      handleMessage({
+        updates: [{
+          values: gsvValues
+        }]
+      });
+    }
+    return;
+  }
+
+  switch (sentenceId) {
     case '#UNIHEADINGA':
       parser = uniheadingAParser
       break
@@ -435,28 +456,28 @@ const parseNmeaSentence = (compleSentence: string, handleMessage: any) => {
   const values = parser(parts, sentence.split('*')[0]);
 
   // Throttled debug logging for HPR parsing (max once per 10 seconds)
-  if (parts[0] === '$GNHPR') {
-    const now = Date.now();
-    if (now - lastHprDebugLog >= 10000) {
-      lastHprDebugLog = now;
-      if (values.length) {
-        console.log('HPR parsed successfully:', JSON.stringify(values));
-      } else {
-        console.log('HPR parse returned no values from:', sentence);
-      }
-    }
-  }
+  // if (parts[0] === '$GNHPR') {
+  //   const now = Date.now();
+  //   if (now - lastHprDebugLog >= 10000) {
+  //     lastHprDebugLog = now;
+  //     if (values.length) {
+  //       console.log('HPR parsed successfully:', JSON.stringify(values));
+  //     } else {
+  //       console.log('HPR parse returned no values from:', sentence);
+  //     }
+  //   }
+  // }
 
   if (values.length) {
     // Throttled debug logging for heading delta emission (max once per 10 seconds)
-    const headingValue = values.find((v: PathValue) => v.path === 'navigation.headingTrue');
-    if (headingValue) {
-      const now = Date.now();
-      if (now - lastHeadingDeltaLog >= 10000) {
-        lastHeadingDeltaLog = now;
-        console.log('Sending navigation.headingTrue to SignalK:', JSON.stringify(headingValue), 'from sentence type:', parts[0]);
-      }
-    }
+    // const headingValue = values.find((v: PathValue) => v.path === 'navigation.headingTrue');
+    // if (headingValue) {
+    //   const now = Date.now();
+    //   if (now - lastHeadingDeltaLog >= 10000) {
+    //     lastHeadingDeltaLog = now;
+    //     console.log('Sending navigation.headingTrue to SignalK:', JSON.stringify(headingValue), 'from sentence type:', parts[0]);
+    //   }
+    // }
 
     handleMessage({
       updates: [{
@@ -488,11 +509,84 @@ $command,GNRMC 1,response: OK*1A
 const configMap: { [key: string]: string } = {}
 const configParser = (parts: string[]) => {
   configMap[parts[1]] = parts[2].slice(0, -4).split(' ').slice(2).join(' ');
+  console.log('UM982 CONFIG response:', parts[1], '=', configMap[parts[1]]);
   return [{
     path: 'sensors.rtk.um982',
     value: configMap
   }] as PathValue[];
 }
+
+// GSV sentence system prefix to GNSS system name mapping
+const gsvSystemMap: { [key: string]: string } = {
+  'GP': 'GPS',
+  'GL': 'GLONASS',
+  'GB': 'BeiDou',
+  'GA': 'Galileo',
+  'GQ': 'QZSS',
+  'GN': 'GPS', // multi-system fallback
+  'GI': 'NavIC'
+};
+
+const gsvParser = (parts: string[], sentenceId: string): PathValue[] => {
+  // Determine antenna type: GSVH = slave, GSV = main
+  const isSlaveAntenna = sentenceId.endsWith('GSVH');
+
+  // Extract system prefix (e.g. $GPGSV -> GP, $GLGSVH -> GL)
+  const prefix = sentenceId.substring(1, 3);
+  const gnssSystem = gsvSystemMap[prefix] || 'Unknown';
+  const antennaType = isSlaveAntenna ? 'SLAVE' : 'MAIN';
+
+  // GSV format: $xxGSV,totalMsgs,msgNum,totalSats,[satId,elev,azim,snr],...,signalId*checksum
+  // Each satellite block is 4 fields: id, elevation(deg), azimuth(deg), SNR(dB)
+  // The last field before the checksum may be a signal ID (NMEA 4.10+)
+
+  const satellites: { id: string, elevation: number | null, azimuth: number | null, SNR: number | null }[] = [];
+
+  // Satellite data starts at index 4, in groups of 4
+  // Remove checksum from last field if present
+  const cleanParts = [...parts];
+  const lastIdx = cleanParts.length - 1;
+  if (cleanParts[lastIdx] && cleanParts[lastIdx].includes('*')) {
+    cleanParts[lastIdx] = cleanParts[lastIdx].split('*')[0];
+  }
+
+  // Determine how many satellite blocks we have
+  // Fields 4,5,6,7 = sat1; 8,9,10,11 = sat2; etc.
+  // But there may be a trailing signal ID field (single digit) at the end
+  let dataFields = cleanParts.slice(4);
+
+  // Check if last field is a signal ID (1-2 digit number that doesn't fit in a group of 4)
+  if (dataFields.length % 4 === 1) {
+    dataFields = dataFields.slice(0, -1); // remove signal ID
+  }
+
+  for (let i = 0; i + 3 < dataFields.length; i += 4) {
+    const satId = dataFields[i];
+    const elev = dataFields[i + 1];
+    const azim = dataFields[i + 2];
+    const snr = dataFields[i + 3];
+
+    if (!satId) continue;
+
+    satellites.push({
+      id: satId,
+      elevation: elev ? parseFloat(elev) * Math.PI / 180 : null,  // convert to radians
+      azimuth: azim ? parseFloat(azim) * Math.PI / 180 : null,    // convert to radians
+      SNR: snr ? parseFloat(snr) : null
+    });
+  }
+
+  if (satellites.length === 0) return [];
+
+  return [{
+    path: 'navigation.gnss.satellitesInView',
+    value: {
+      gnss: gnssSystem,
+      antennaType: antennaType,
+      satellites: satellites
+    }
+  }] as PathValue[];
+};
 
 const modeParser = (parts: string[]) => [{
   path: 'navigation.gnss.9820.mode',
@@ -500,9 +594,10 @@ const modeParser = (parts: string[]) => [{
 } as PathValue];
 
 const hprParser = (parts: string[]) => {
+  const heading = parseFloat(parts[2]);
   return [{
     path: 'navigation.headingTrue',
-    value: parseFloat(parts[2]) * Math.PI / 180
+    value: heading === 0 ? null : heading * Math.PI / 180
   }
   ] as PathValue[]
 }
@@ -639,7 +734,7 @@ const HEADING_TRUE_INDEX = CONVERTERS.UNIHEADINGA.findIndex(c => c.path === 'nav
 // (i.e. everything up to first semicolon)
 // which lets field indexes match UM982 documentation
 const uniheadingAParser = (parts: string[], sentence: string) => {
-  console.log('UNIHEADINGA received:', sentence);
+  // console.log('UNIHEADINGA received:', sentence);
 
   // Split by semicolon first to separate header from data
   const [headerSection, dataSection] = sentence.split(';');
@@ -652,7 +747,7 @@ const uniheadingAParser = (parts: string[], sentence: string) => {
   // Parse data section by commas (remove checksum if present)
   const dataFields = dataSection.split('*')[0].split(',');
 
-  console.log('UNIHEADINGA data fields:', dataFields);
+  // console.log('UNIHEADINGA data fields:', dataFields);
 
   // subtracting 2 from index->datafield mapping to be consistent with UM982 documentation for UNIHEADINGA
   // field ID 1 is header
@@ -662,10 +757,10 @@ const uniheadingAParser = (parts: string[], sentence: string) => {
     value: c.convert(dataFields[c.index - 2] || 'invalid')
   } as PathValue))
 
-  console.log('UNIHEADINGA parsed values:', parsed);
+  // console.log('UNIHEADINGA parsed values:', parsed);
 
   if (parsed[POSITION_TYPE_INDEX].value === 'NONE') {
-    console.log('Position type is NONE, setting heading to null');
+    // console.log('Position type is NONE, setting heading to null');
     parsed[HEADING_TRUE_INDEX].value = null;
   }
 
@@ -706,25 +801,29 @@ const sample = [
 
 function validateConfiguration(obj: any): obj is Configuration {
   if (!obj || typeof obj !== 'object') {
+    console.log('UM982 validation failed: obj is null or not an object');
     return false;
   }
+
+  console.log('UM982 validateConfiguration called with:', JSON.stringify(obj, null, 2));
 
   // Validate connection is provided
   if (!obj.connection ||
     typeof obj.connection !== 'string' ||
     obj.connection.trim() === '' ||
     obj.connection === 'No connections available') {
+    console.log('UM982 validation failed: connection invalid, value:', obj.connection);
     return false;
   }
 
   // Only validate NTRIP configuration if NTRIP is enabled
   if (obj.ntripEnabled === true) {
-    // Check required string properties for NTRIP
+    // Check required string properties for NTRIP (password is optional)
     if (
       typeof obj.host !== 'string' ||
       typeof obj.mountpoint !== 'string' ||
-      typeof obj.username !== 'string' ||
-      typeof obj.password !== 'string') {
+      typeof obj.username !== 'string') {
+      console.log('UM982 validation failed: NTRIP string fields - host:', typeof obj.host, 'mountpoint:', typeof obj.mountpoint, 'username:', typeof obj.username);
       return false;
     }
 
@@ -733,6 +832,7 @@ function validateConfiguration(obj: any): obj is Configuration {
       typeof obj.interval !== 'number' ||
       typeof obj.latitude !== 'number' ||
       typeof obj.longitude !== 'number') {
+      console.log('UM982 validation failed: NTRIP number fields - port:', typeof obj.port, obj.port, 'interval:', typeof obj.interval, obj.interval, 'latitude:', typeof obj.latitude, obj.latitude, 'longitude:', typeof obj.longitude, obj.longitude);
       return false;
     }
 
@@ -741,16 +841,19 @@ function validateConfiguration(obj: any): obj is Configuration {
       !Number.isFinite(obj.interval) || obj.interval <= 0 ||
       !Number.isFinite(obj.latitude) ||
       !Number.isFinite(obj.longitude)) {
+      console.log('UM982 validation failed: NTRIP number range checks - port:', obj.port, 'interval:', obj.interval, 'latitude:', obj.latitude, 'longitude:', obj.longitude);
       return false;
     }
 
     // Check latitude/longitude ranges for NTRIP
     if (obj.latitude < -90 || obj.latitude > 90 ||
       obj.longitude < -180 || obj.longitude > 180) {
+      console.log('UM982 validation failed: lat/lon out of range - latitude:', obj.latitude, 'longitude:', obj.longitude);
       return false;
     }
   }
 
+  console.log('UM982 validation passed');
   return true;
 }
 

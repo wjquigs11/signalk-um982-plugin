@@ -1,0 +1,2185 @@
+INSTALLATION AND OPERATION
+
+USER MANUAL
+
+WWW.UNICORECOMM.COM
+
+UM982
+GPS/BDS/GLONASS/Galileo/QZSS
+All-constellation Multi-frequency
+High Precision Positioning & Heading Module
+
+Copyright© 2009-2023, Unicore Communications, Inc.
+Data subject to change without notice.
+
+Revision History
+Version
+
+Revision History
+
+Date
+
+R1.0
+
+First release
+
+2022-05-19
+
+Table 2-1: Update the description of V_BCKP pin;
+Chapter 3.3: Add requirement for V_BCKP;
+R1.1
+
+Add chapter 3.1: Recommended Minimal Design;
+Table 2-4: Update the IO threshold;
+
+2022-09-09
+
+Chapter 5.2: Update the description of the humidity indicator;
+Table 1-1: Update the heading accuracy (0.1° /1m baseline)
+Add Chapter 3.5 Recommended PCB Package Design;
+R1.2
+
+Optimize Chapter 3.2 Antenna Feed Design;
+
+2023-04
+
+Optimize Chapter 3.3 Power-on and Power-off
+R1.3
+
+Add PPP accuracy in section 1.2
+
+2023-09
+
+i
+
+UM982 User Manual
+Legal right notice
+This manual provides information and details on the products of Unicore
+Communication, Inc. (“Unicore”) referred to herein.
+All rights, title and interest to this document and the information such as data, designs,
+layouts contained in this manual are fully reserved, including but not limited to the
+copyrights, patents, trademarks and other proprietary rights as relevant governing laws
+may grant, and such rights may evolve and be approved, registered or granted from the
+whole information aforesaid or any part(s) of it or any combination of those parts.
+Unicore holds the trademarks of “和芯星通”, “UNICORECOMM” and other trade name,
+trademark, icon, logo, brand name and/or service mark of Unicore products or their
+product serial referred to in this manual (collectively “Unicore Trademarks”).
+This manual or any part of it, shall not be deemed as, either expressly, implied, by
+estoppel or any other form, the granting or transferring of Unicore rights and/or
+interests (including but not limited to the aforementioned trademark rights), in whole or
+in part.
+
+Disclaimer
+The information contained in this manual is provided “as is” and is believed to be true
+and correct at the time of its publication or revision. This manual does not represent,
+and in any case, shall not be construed as a commitments or warranty on the part of
+Unicore with respect to the fitness for a particular purpose/use, the accuracy, reliability
+and correctness of the information contained herein.
+Information, such as product specifications, descriptions, features and user guide in this
+manual, are subject to change by Unicore at any time without prior notice, which may
+not be completely consistent with such information of the specific product you
+purchase.
+Should you purchase our product and encounter any inconsistency, please contact us or
+our local authorized distributor for the most up-to-date version of this manual along
+with any addenda or corrigenda.
+
+ii
+
+Foreword
+This document describes the information of the hardware, package, specification and
+the use of Unicore UM982 module.
+
+Target Readers
+This document applies to technicians who possess the expertise on GNSS receivers.
+
+iii
+
+UM982 User Manual
+
+Contents
+1
+
+2
+
+Introduction ............................................................................................... 1
+1.1
+
+Key Features.....................................................................................................................2
+
+1.2
+
+Key Specifications ...........................................................................................................2
+
+1.3
+
+Block Diagram ..................................................................................................................5
+
+Hardware ................................................................................................... 6
+2.1
+
+Pin Definition ....................................................................................................................6
+
+2.2
+
+Electrical Specifications ..................................................................................................9
+
+2.2.1 Absolute Maximum Ratings ........................................................................................ 9
+2.2.2 Operating Conditions ................................................................................................. 10
+2.2.3 IO Threshold ............................................................................................................... 10
+2.2.4 Antenna Feature ......................................................................................................... 10
+2.3
+
+3
+
+Dimensions ................................................................................................................... 11
+
+Hardware Design ..................................................................................... 13
+3.1
+
+Recommended Minimal Design ................................................................................... 13
+
+3.2
+
+Antenna Feed Design ................................................................................................... 14
+
+3.3
+
+Power-on and Power-off ............................................................................................. 15
+
+3.4
+
+Grounding and Heat Dissipation ................................................................................. 15
+
+3.5
+
+Recommended PCB Package Design ......................................................................... 16
+
+4
+
+Production Requirement.......................................................................... 17
+
+5
+
+Packaging................................................................................................ 18
+5.1
+
+Label Description .......................................................................................................... 18
+
+5.2
+
+Product Packaging ....................................................................................................... 18
+
+I
+
+1 Introduction
+UM982 is a new generation of GNSS high precision positioning and heading module
+developed by Unicore Communications. It supports GPS/BDS/GLONASS/Galileo/QZSS,
+and can simultaneously track GPS L1/L2/L5, BDS B1I/B2I/B3I, GLONASS G1/G2, Galileo
+E1/E5a/E5b, and QZSS L1/L2/L5. The module is mainly used in UAVs, lawn mowers,
+precision agriculture, and intelligent driving. With the support of on-chip RTK positioning
+and dual-antenna heading solution, UM982 can be used as a rover or base station.
+UM982 is based on NebulasⅣTM, a GNSS SoC which integrates RF, baseband and high
+precision algorithm. Besides, the SoC integrates a dual-core CPU, a high speed floating
+point processor and an RTK co-processor, with 22 nm low power design, and it supports
+1408 super channels. All these above enable stronger signal processing capability.
+UM982 allows a flexible configuration of multi-system joint positioning or single system
+standalone positioning. With the built-in advanced anti-jam unit, the module can
+achieve high accuracy even in the complex electromagnetic environment.
+Furthermore, UM982 supports abundant interfaces such as UART, I2C*, SPI*, as well as
+1PPS, EVENT, CAN*, which meets the customers’ needs in different applications.
+
+Figure 1-1 UM982 Module
+
+* I2C, SPI, CAN: reserved interfaces, not supported currently
+
+UC-00-M31 EN R1.3
+
+Introduction
+
+1
+
+UM982 User Manual
+
+1.1 Key Features
+
+
+16 mm × 21 mm × 2.6 mm, surface-mount device
+
+
+
+Supports all-constellation multi-frequency on-chip RTK positioning and dualantenna heading solution
+
+
+
+Supports BDS B1I/B2I/B3I + GPS L1/L2/L5 + GLONASS G1/G2 + Galileo
+E1/E5a/E5b + QZSS L1/L2/L5 + SBAS
+
+
+
+Dual-RTK engine technology
+
+
+
+Adaptive recognition of RTCM input data format
+
+
+
+Dual antenna input
+
+
+
+Supports 3 × UART, 1 × I2C*, 1 × SPI* and 1 × CAN*
+
+1.2 Key Specifications
+Table 1-1 Technical Specifications
+
+Basic Information
+Channels
+
+1408 channels, based on NebulasIVTM
+
+Constellations
+
+BDS/GPS/GLONASS/Galileo/QZSS
+BDS: B1I, B2I, B3I
+GPS: L1 C/A, L2P (Y)/L2C, L5
+
+Master Antenna Frequencies
+
+GLONASS: G1, G2
+Galileo: E1, E5a, E5b
+QZSS: L1, L2, L5
+BDS: B1I, B2I, B3I
+GPS: L1 C/A, L2C
+
+Slave Antenna Frequencies
+
+GLONASS: G1, G2
+Galileo: E1, E5b
+QZSS: L1, L2
+
+Power
+Voltage
+
++3.0 V ~ +3.6 V DC
+
+* I2C, SPI, CAN: reserved interfaces, not supported currently
+
+2
+
+Introduction
+
+UC-00-M31 EN R1.3
+
+Power Consumption
+
+600 mW1
+
+Performance2
+Single Point
+
+Horizontal: 1.5 m
+
+Positioning3
+Vertical: 2.5 m
+
+(RMS)
+
+Horizontal: 0.4 m + 1ppm
+DGPS (RMS)3,4
+Vertical: 0.8 m + 1ppm
+
+Positioning Accuracy
+
+Horizontal: 0.8 cm + 1 ppm
+RTK (RMS)3, 4
+Vertical: 1.5 cm + 1 ppm
+Horizontal: 5 cm
+PPP (RMS)5
+Vertical: 10 cm
+Observation Accuracy (RMS)
+
+BDS
+
+GPS
+
+GLONASS
+
+Galileo
+
+B1I/L1 C/A/G1/E1 Pseudorange
+
+10 cm
+
+10 cm
+
+10 cm
+
+10 cm
+
+B1I/L1 C/A/G1/E1 Carrier Phase
+
+1 mm
+
+1 mm
+
+1 mm
+
+1 mm
+
+B3I/L2P(Y)/L2C/G2 Pseudorange
+
+10 cm
+
+10 cm
+
+10 cm
+
+10 cm
+
+B3I/L2P(Y)/L2C/G2 Carrier Phase
+
+1 mm
+
+1 mm
+
+1 mm
+
+1 mm
+
+B2I/L5/E5a/E5b Pseudorange
+
+10 cm
+
+10 cm
+
+10 cm
+
+10 cm
+
+B2I/L5/E5a/E5b Carrier Phase
+
+1 mm
+
+1 mm
+
+1 mm
+
+1 mm
+
+Heading Accuracy (RMS)
+
+0.1° /1m baseline
+
+Time Pulse Accuracy (RMS)
+
+20 ns
+
+Velocity Accuracy6 (RMS)
+
+0.03 m/s
+
+1
+
+Dual antenna 10 Hz PVT + 10 Hz RTK + 10 Hz Heading
+
+2
+
+Performance specifications of the master antenna
+
+3
+
+Test results may be biased due to atmospheric conditions, baseline length, GNSS antenna type, multipath, number
+
+of visible satellites, and satellite geometry
+4
+
+The measurement uses a 1 km baseline and a receiver with good antenna performance, regardless of possible
+
+errors of antenna phase center offset
+5
+
+After 20 minutes of convergence under open sky without jamming
+
+6
+
+Open sky, unobstructed scene, 99% @ static
+
+UC-00-M31 EN R1.3
+
+Introduction
+
+3
+
+UM982 User Manual
+Cold Start < 30 s
+Time to First Fix7 (TTFF)
+Hot Start < 4 s
+Initialization Time3
+
+< 5 s (Typical)
+
+Initialization Reliability3
+
+> 99.9%
+
+Data Update Rate
+
+20 Hz Positioning & Heading
+20 Hz Raw Data observation
+
+Differential Data
+
+RTCM 3.X
+
+Data Format
+
+NMEA-0183, Unicore
+
+Physical Characteristics
+Package
+
+48 pin LGA
+
+Dimensions
+
+21 mm × 16 mm × 2.6 mm
+
+Weight
+
+1.82 g ± 0.03 g
+
+Environmental Specifications
+Operating Temperature
+
+-40 ° C ~ +85 ° C
+
+Storage Temperature
+
+-55 ° C ~ +95 ° C
+
+Humidity
+
+95% No condensation
+
+Vibration
+
+GJB150.16A-2009, MIL-STD-810F
+
+Shock
+
+GJB150.18A-2009, MIL-STD-810F
+
+Functional Ports
+UART × 3
+I2C* × 1
+
+7
+
+SPI* × 1
+
+Slave
+
+CAN* × 1
+
+Shared with UART3
+
+-130dBm @ more than 12 available satellites
+
+* I2C, SPI, CAN: reserved interfaces, not supported currently
+
+4
+
+Introduction
+
+UC-00-M31 EN R1.3
+
+1.3 Block Diagram
+Nebulas IV
+
+UART1
+UART2
+UART3
+
+ANT2_IN
+
+LNA
+
+SAW
+Filter
+
+I2C
+SPIS
+Interface
+
+PPS
+EVENT
+
+RTK_STAT
+PVT_STAT
+GNSS
+RF
+
+ANT1_IN
+
+LNA
+
+GNSS
+BB
+
+ERR_STAT
+
+RESET_N
+
+SAW
+Filter
+
+PMU
+
+TCXO
+
+CLOCK
+
+UM982
+Figure 1-2 UM982 Block Diagram
+
+
+
+RF Part
+
+The receiver gets filtered and enhanced GNSS signal from the antenna via a coaxial
+cable. The RF part converts the RF input signals into the IF signals, and converts IF
+analog signals into digital signals required for NebulasIVTM chip (UC9810).
+
+
+NebulasIVTM SoC (UC9810)
+
+NebulasIV (UC9810) is UNICORECOMM’s new generation high precision GNSS SoC with
+22 nm low power design, supporting all constellations, multiple frequencies, and 1408
+super channels. It integrates a dual-core CPU, a high speed floating point processor and
+an RTK co-processor, which can fulfill the high precision baseband processing and RTK
+positioning/heading independently.
+
+
+External Interfaces
+
+The external interfaces of UM982 include UART, I2C*, SPI*, CAN*, PPS, EVENT, RTK_STAT,
+PVT_STAT, ERR_STAT, RESET_N, etc.
+
+* 2
+I C, SPI, CAN: reserved interfaces, not supported currently
+
+UC-00-M31 EN R1.3
+
+Introduction
+
+5
+
+UM982 User Manual
+
+2 Hardware
+
+GND
+
+ANT2_IN
+
+GND
+
+GND
+
+RESET_N
+
+EVENT
+
+RSV
+
+PPS
+
+RSV
+
+RXD3
+
+TXD3
+
+BIF
+
+BIF
+
+2.1 Pin Definition
+
+37
+
+36
+
+35
+
+34
+
+33
+
+32
+
+31
+
+30
+
+29
+
+28
+
+27
+
+26
+
+25
+
+RSV
+
+38
+
+24
+
+VCC
+
+RSV
+
+39
+
+23
+
+VCC
+
+RSV
+
+40
+
+22
+
+SDA
+
+GND
+
+41
+
+21
+
+SCL
+
+RSV
+
+42
+
+20
+
+TXD2
+
+GND
+
+43
+
+19
+
+RXD2
+
+RSV
+
+44
+
+18
+
+TXD1
+
+GND
+
+45
+
+17
+
+RXD1
+
+RSV
+
+46
+
+16
+
+RTK_STAT
+
+RSV
+
+47
+
+15
+
+PVT_STAT
+
+RSV
+
+48
+
+14
+
+ERR_STAT
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+SPIS_CLK
+
+SPIS_MISO
+
+SPIS_SDRY
+
+RSV
+
+RSV
+
+RSV
+
+GND
+
+5
+
+SPIS_MOSI
+
+ANT1_IN
+
+4
+
+SPIS_CSN
+
+3
+
+V_BCKP
+
+2
+
+GND
+
+1
+
+GND
+
+Top View
+
+Figure 2-1 UM982 Pin Definition
+Table 2-1 Pin Description
+
+No.
+
+Pin
+
+I/O
+
+Description
+
+1
+
+GND
+
+—
+
+Ground
+
+2
+
+ANT1_IN
+
+I
+
+GNSS master antenna signal input
+
+3
+
+GND
+
+—
+
+Ground
+
+4
+
+GND
+
+—
+
+Ground
+When the main power supply VCC is cut off,
+V_BCKP supplies power to RTC and relevant
+
+5
+
+V_BCKP
+
+I
+
+register. Level requirement: 2.0 V ~ 3.6 V, and the
+working current should be less than 60 μA at
+25 ° C. If you do not use the hot start function,
+connect V_BCKP to VCC. Do NOT connect it to
+
+6
+
+Hardware
+
+UC-00-M31 EN R1.3
+
+No.
+
+Pin
+
+I/O
+
+Description
+ground or leave it floating.
+
+6
+
+SPIS_CSN
+
+I
+
+Chip select pin for SPI slave
+
+7
+
+SPIS_MOSI
+
+I
+
+8
+
+SPIS_CLK
+
+I
+
+9
+
+SPIS_MISO
+
+O
+
+10
+
+SPIS_SDRY
+
+O
+
+Interrupt output of SPI slave
+
+11
+
+RSV
+
+—
+
+Reserved, floating
+
+12
+
+RSV
+
+—
+
+Reserved, floating
+
+13
+
+RSV
+
+—
+
+Reserved, floating
+
+Master Out / Slave In. This pin is used to receive
+data in slave mode.
+Clock input pin for SPI slave
+Master In / Slave Out. This pin is used to transmit
+data in slave mode.
+
+Error status: active high;
+14
+
+ERR_STAT
+
+O
+
+outputs high when failing self-test, and low when
+passing self-test
+PVT status: active high;
+
+15
+
+PVT_STAT
+
+O
+
+outputs high when positioning and low when not
+positioning
+RTK status: active high;
+
+16
+
+RTK_STAT
+
+O
+
+outputs high for RTK fixed solution and low for
+other positioning status or no positioning
+
+17
+
+RXD1
+
+I
+
+COM1 input, LVTTL level
+
+18
+
+TXD1
+
+O
+
+COM1 output, LVTTL level
+
+19
+
+RXD2
+
+I
+
+COM2 input, LVTTL level
+
+20
+
+TXD2
+
+O
+
+COM2 output, LVTTL level
+
+21
+
+SCL
+
+I/O
+
+I2C clock
+
+22
+
+SDA
+
+I/O
+
+I2C data
+
+23
+
+VCC
+
+POWER
+
+Power supply (+3.3 V)
+
+UC-00-M31 EN R1.3
+
+Hardware
+
+7
+
+UM982 User Manual
+No.
+
+Pin
+
+I/O
+
+Description
+
+24
+
+VCC
+
+POWER
+
+Power supply (+3.3 V)
+Built-in function; recommended to add a through-
+
+25
+
+BIF
+
+—
+
+hole testing point and a 10 kΩ pull-up resistor;
+cannot connect ground or power supply, cannot
+input/output data, and cannot be floating
+Built-in function; recommended to add a through-
+
+26
+
+BIF
+
+—
+
+hole testing point and a 10 kΩ pull-up resistor;
+cannot connect ground or power supply, cannot
+input/output data, and cannot be floating
+
+8
+
+COM3 output, which can be used as CAN TXD,
+
+27
+
+TXD3
+
+O
+
+28
+
+RXD3
+
+I
+
+29
+
+RSV
+
+—
+
+30
+
+PPS
+
+O
+
+31
+
+RSV
+
+—
+
+32
+
+EVENT
+
+I
+
+33
+
+RESET_N
+
+I
+
+34
+
+GND
+
+—
+
+Ground
+
+35
+
+GND
+
+—
+
+Ground
+
+36
+
+ANT2_IN
+
+I
+
+GNSS slave antenna signal input
+
+37
+
+GND
+
+—
+
+Ground
+
+38
+
+RSV
+
+—
+
+Reserved, floating
+
+39
+
+RSV
+
+—
+
+Reserved, floating
+
+40
+
+RSV
+
+—
+
+Reserved, floating
+
+41
+
+GND
+
+—
+
+Ground
+
+LVTTL level
+COM3 input, which can be used as CAN RXD,
+LVTTL level
+Reserved, floating
+Pulse per second, with adjustable pulse width and
+polarity
+Reserved, floating
+Event mark input, with adjustable frequency and
+polarity
+System reset, active low, and the active time
+should be no less than 5 ms.
+
+Hardware
+
+UC-00-M31 EN R1.3
+
+No.
+
+Pin
+
+I/O
+
+Description
+
+42
+
+RSV
+
+—
+
+Reserved, floating
+
+43
+
+GND
+
+—
+
+Ground
+
+44
+
+RSV
+
+—
+
+Reserved, floating
+
+45
+
+GND
+
+—
+
+Ground
+
+46
+
+RSV
+
+—
+
+Reserved, floating
+
+47
+
+RSV
+
+—
+
+Reserved, floating
+
+48
+
+RSV
+
+—
+
+Reserved, floating
+
+2.2 Electrical Specifications
+2.2.1 Absolute Maximum Ratings
+Table 2-2 Absolute Maximum Ratings
+
+Parameter
+
+Symbol
+
+Min.
+
+Max.
+
+Unit
+
+Power Supply Voltage
+
+VCC
+
+-0.3
+
+3.6
+
+V
+
+Input Voltage
+
+Vin
+
+-0.3
+
+3.6
+
+V
+
+ANT1_IN/ANT2_IN
+
+-0.3
+
+6
+
+V
+
++10
+
+dBm
+
+95
+
+°C
+
+Master/Slave Antenna
+Signal Input
+Master/Slave Antenna RF
+
+ANT1_IN/ANT2_IN
+
+Input Power
+
+input power
+
+Storage Temperature
+
+Tstg
+
+UC-00-M31 EN R1.3
+
+-55
+
+Hardware
+
+9
+
+UM982 User Manual
+
+2.2.2 Operating Conditions
+Table 2-3 Operating Conditions
+
+Parameter
+
+Symbol
+
+Min.
+
+Typ.
+
+Max.
+
+Unit
+
+Power Supply Voltage8
+
+VCC
+
+3.0
+
+3.3
+
+3.6
+
+V
+
+Maximum VCC Ripple
+
+Vrpp
+
+0
+
+50
+
+mV
+
+Working Current9
+
+Iopr
+
+300
+
+mA
+
+Operating Temperature
+
+Topr
+
+85
+
+°C
+
+Power Consumption
+
+P
+
+180
+-40
+600
+
+Condition
+
+VCC=3.3 V
+
+mW
+
+2.2.3 IO Threshold
+Table 2-4 IO Threshold
+
+Parameter
+Low Level Input
+Voltage
+High Level Input
+Voltage
+Low Level
+Output Voltage
+High Level
+Output Voltage
+
+Symbol
+
+Min.
+
+Vin_low
+
+Max.
+
+Unit
+
+0
+
+0.6
+
+V
+
+Vin_high
+
+VCC × 0.7
+
+VCC + 0.2
+
+V
+
+Vout_low
+
+0
+
+0.45
+
+V
+
+Iout = 2 mA
+
+VCC
+
+V
+
+Iout = 2 mA
+
+Vout_high
+
+Typ.
+
+VCC 0.45
+
+Condition
+
+2.2.4 Antenna Feature
+Table 2-5 Antenna Feature
+
+Parameter
+Optimum Input
+Gain
+
+Symbol
+
+Min.
+
+Typ.
+
+Max.
+
+Unit
+
+Gant
+
+18
+
+30
+
+36
+
+dB
+
+Condition
+
+8
+
+The voltage range of VCC (3.0 V ~ 3.6 V) has already included the ripple voltage.
+
+9
+
+Since the product has capacitors inside, inrush current occurs during power-on. You should evaluate in the actual
+
+environment in order to check the effect of the supply voltage drop caused by inrush current in the system.
+
+10
+
+Hardware
+
+UC-00-M31 EN R1.3
+
+2.3 Dimensions
+Table 2-6 Dimensions
+
+Parameter
+
+Min. (mm)
+
+Typ. (mm)
+
+Max. (mm)
+
+A
+
+20.80
+
+21.00
+
+21.50
+
+B
+
+15.80
+
+16.00
+
+16.50
+
+C
+
+2.40
+
+2.60
+
+2.80
+
+D
+
+2.78
+
+2.88
+
+2.98
+
+E
+
+0.95
+
+1.05
+
+1.15
+
+F
+
+1.55
+
+1.65
+
+1.75
+
+G
+
+1.17
+
+1.27
+
+1.37
+
+H
+
+0.70
+
+0.80
+
+0.90
+
+K
+
+1.40
+
+1.50
+
+1.60
+
+M
+
+4.10
+
+4.20
+
+4.30
+
+N
+
+3.70
+
+3.80
+
+3.90
+
+P
+
+2.00
+
+2.10
+
+2.20
+
+R
+
+0.90
+
+1.00
+
+1.10
+
+X
+
+0.72
+
+0.82
+
+0.92
+
+UC-00-M31 EN R1.3
+
+Hardware
+
+11
+
+UM982 User Manual
+
+Figure 2-2 UM982 Mechanical Dimensions
+
+12
+
+Hardware
+
+UC-00-M31 EN R1.3
+
+3 Hardware Design
+3.1 Recommended Minimal Design
+ANT2
+
+ANT1
+
+3.3V
+
+L1
+
+3.3V 3.3V
+
+ANT_BIAS1
+C1
+
+C3
+L1
+
+R1
+
+R1
+
+BIF
+
+BIF
+
+ANT_BIAS2
+C1
+V_BCKP VCC
+C2
+
+C2
+
+ANT1_IN
+
+ANT2_IN
+
+UM982
+
+TXD
+
+RXD(UART)
+
+RXD
+
+TXD(UART)
+
+RESET_N
+GND
+
+IO
+
+HOST
+
+GND
+
+Figure 3-1 Recommended Minimal Design
+
+L1: 68 nH RF inductor in 0603 package is recommended
+C1: 100 nF + 100 pF capacitors connected in parallel is recommended
+C2: 100 pF capacitor is recommended
+C3: N * 10 μF + 1 * 100 nF capacitors connected in parallel is recommended, and the
+total inductance should be no less than 30 μF
+R1: 10 kΩ resistor is recommended
+
+UC-00-M31 EN R1.3
+
+Hardware Design
+
+13
+
+UM982 User Manual
+
+3.2 Antenna Feed Design
+When feeding the antenna from the outside, you can use devices with high power and
+that can withstand high voltage. Gas discharge tube, varistor, TVS tube and other highpower protective devices may also be used in the power supply circuit to improve the
+protection.
+If the antenna feed supply ANT_BIAS and the module’s main supply VCC use the same
+power rail, the ESD, surge and overvoltage from the antenna will have an effect on VCC,
+which may cause damage to the module. Therefore, it is recommended to design an
+independent power rail for the ANT_BIAS to reduce the possibility of module damage.
+
+ANT2
+
+ANT1
+
+ANT1_BIAS
+
+L1
+
+D1
+
+D2
+
+ANT2_BIAS
+
+C1
+
+C3
+
+L2
+
+D3
+
+C2
+
+D4
+
+C4
+ANT1_IN
+
+ANT2_IN
+
+UM982
+GND
+
+Figure 3-2 UM982 External Antenna Feed Reference Circuit
+
+Notes:
+
+
+L1 and L2: feed inductor, 68 nH RF inductor in 0603 package is recommended
+
+
+
+C1and C3: decoupling capacitor, recommended to connect two capacitors of 100 nF /
+100 pF in parallel
+
+
+
+C2 and C4: DC blocking capacitor, recommended 100 pF capacitor
+
+
+
+D1and D4: ESD diode, choose the ESD protection device that supports high frequency
+signals (above 2000 MHz)
+
+
+
+D2 and D3: TVS diode, choose the TVS diode with appropriate clamping specification
+according to the requirement of feed voltage and antenna withstand voltage
+
+14
+
+Hardware Design
+
+UC-00-M31 EN R1.3
+
+3.3 Power-on and Power-off
+VCC
+
+
+The VCC initial level when power-on should be less than 0.4 V.
+
+
+
+The VCC ramp when power-on should be monotonic, without plateaus.
+
+
+
+The voltages of undershoot and ringing should be within 5% VCC.
+
+
+
+VCC power-on waveform: The time interval from 10% rising to 90% must be within
+100 μs ~1 ms.
+
+
+
+Power-on time interval: The time interval between the power-off (VCC < 0.4 V) to
+the next power-on must be larger than 500 ms.
+
+V_BCKP
+
+
+The V_BCKP initial level when power-on should be less than 0.4 V.
+
+
+
+The V_BCKP ramp when power-on should be monotonic, without plateaus.
+
+
+
+The voltages of undershoot and ringing should be within 5% V_BCKP.
+
+
+
+V_BCKP power-on waveform: The time interval from 10% rising to 90% must be
+within 100 μs ~1 ms.
+
+
+
+Power-on time interval: The time interval between the power-off (V_BCKP < 0.4 V)
+to the next power-on must be larger than 500 ms.
+
+3.4 Grounding and Heat Dissipation
+
+Grounding and
+heat dissipation pad
+
+Figure 3-3 Grounding and Heat Dissipation Pad (Bottom View)
+
+UC-00-M31 EN R1.3
+
+Hardware Design
+
+15
+
+UM982 User Manual
+The 35 pads in the rectangle in Figure 3-3 are for grounding and heat dissipation. In the
+PCB design, the pads should be connected to a large sized ground to strengthen the
+heat dissipation.
+
+3.5 Recommended PCB Package Design
+
+2.44
+
+2.29
+
+1.81
+
+3.80
+
+2.1 0
+
+1.12
+
+1.27
+
+3.58
+
+3.73
+
+1.65
+
+3.80
+
+2.10
+
+16.00
+
+1.27
+
+1.65
+
+1.77
+
+See the following figure for the recommended PCB package design.
+
+Figure 3-4 Recommended PCB Package Design
+
+Notes:
+For the convenience of testing, the soldering pads of the pins are designed long,
+exceeding the module border much more. For example:
+
+
+The pads denoted as detail C are 1.77 mm longer than the module border.
+
+
+
+The pad denoted as detail A is 0.47 mm longer than the module border. It is
+relatively short as it is an RF pin pad, so we hope the trace on the surface is as
+short as possible to reduce the impact of external interference on the RF signals.
+
+16
+
+Hardware Design
+
+UC-00-M31 EN R1.3
+
+4 Production Requirement
+Recommended soldering temperature curve is as follows:
+
+Rising
+
+Preheating
+
+Reflux
+
+Cooling
+
+°C
+Peak 245 ° C
+
+250
+
+217
+40~60s
+
+200
+
+150
+60~120s
+
+Max. 4° C/s
+
+Max. 3° C/s
+
+100
+
+50
+
+0
+
+Time (s)
+
+Figure 4-1 Soldering Temperature (Lead-free)
+
+Temperature Rising Stage
+
+
+Rising slope: Max. 3 ° C/s
+
+
+
+Rising temperature range: 50 ° C ~ 150 ° C
+
+Preheating Stage
+
+
+Preheating time: 60s ~ 120 s
+
+
+
+Preheating temperature range: 150 ° C ~ 180 ° C
+
+Reflux Stage
+
+
+Over melting temperature (217 ° C) time: 40s ~ 60 s
+
+
+
+Peak temperature for soldering: no higher than 245 ° C
+
+Cooling Stage
+
+
+Cooling slope: Max. 4 ° C / s
+
+UC-00-M31 EN R1.3
+
+Production Requirement
+
+17
+
+UM982 User Manual
+
+
+In order to prevent falling off during soldering of the module, do not solder it on the
+back of the board during design, and it is not recommended to go through
+soldering cycle twice.
+
+
+
+The setting of soldering temperature depends on many factors of the factory, such
+as board type, solder paste type, solder paste thickness, etc. Please also refer to
+the relevant IPC standards and indicators of solder paste.
+
+
+
+Since the lead soldering temperature is relatively low, if using this method, please
+give priority to other components on the board.
+
+
+
+The opening of the stencil needs to meet your design requirement and comply with
+the examine standards. The thickness of the stencil is recommended to be larger
+than 0.15 mm.
+
+5 Packaging
+5.1 Label Description
+
+Product Model
+
+Part Number
+
+Product QR Code
+
+Serial Number
+
+Figure 5-1 Label Description
+
+5.2 Product Packaging
+The UM982 module uses carrier tape and reel (suitable for mainstream surface mount
+devices), packaged in vacuum-sealed aluminum foil antistatic bags, with a desiccant
+inside to prevent moisture. When using reflow soldering process to solder modules,
+please strictly comply with IPC standard to conduct temperature and humidity control.
+As packaging materials such as the carrier tape can only withstand the temperature of
+55 ° C, modules shall be removed from the package during baking.
+
+18
+
+Packaging
+
+UC-00-M31 EN R1.3
+
+Figure 5-2 UM982 Package
+P0
+
+B
+
+E
+
+P2
+
+B
+
+A
+
+Dimensions
+
+24
+0.35
+
+Po 4.00± 0.10
+
+W
+
+21.8
++0.15
+
+A-A
+
+Carrier
+Tape
+
+330*100*44
+
++0.10
+
+1.50 -0.00
+
+B-B
+
+10Po 40.00± 0.20
+
+W 44.00± 0.30
+P 24.00± 0.10
+Ao 16.80± 0.10
+B0 21.80± 0.10
+K0 3.30± 0.10
+t 0.35± 0.05
+
+Cover Tape
+
+0.3
+
+16.8
+1.70 -0.05
+
+1.50 ± 0.10
+0.00
+
+3.3
+
+E 1.75± 0.10
+F 20.20± 0.10
+S 40.40± 0.10
+P2 2.00± 0.10
+Do
+D1
+
+(For Reference Only)
+
+A
+
+C
+
+Feed Direction
+
+Reel Packaging Diagram
+
+S
+
+F
+
+Reel
+
+C(3:1)
+
+Note:
+1. The cumulative tolerance of 10 side holes should not exceed ± 0.2 mm.
+2. Material of the tape: Black antistatic PS (surface impedance 105-1011)
+(surface static voltage <100 V), thickness: 0.35 mm.
+3. Total length of the 13-inch reel package: 6.816 m (Length of the first part of
+empty packets: 0.408 m, length of packets containing modules: 6 m, length
+of the last part of empty packets: 0.408 m).
+4. Total number of packets in the 13-inch reel package: 284 (Number of the
+first part of empty packets: 17; actual number of modules in the packets:
+250; number of the last part of empty packets: 17).
+5. All dimension designs are in accordance with EIA-481-C-2003.
+6. The maximum bending degree of the carrier tape within the length of 250
+mm should not exceed 1 mm (see the figure below).
+
+UC-00-M31 EN R1.3
+
+Packaging
+
+19
+
+1mm
+
+UM982 User Manual
+
+250mm
+
+Figure 5-3 UM982 Reel Package Diagram
+Table 5-1 Package Description
+
+Item
+
+Description
+
+Module Number
+
+250 pieces/reel
+
+Reel Size
+
+Tray: 13"
+External diameter: 330 ± 2 mm,
+Internal diameter: 180 ± 2mm,
+Width: 44.5 ± 0.5 mm
+Thickness: 2.0 ± 0.2 mm
+
+Carrier Tape
+
+Space between (center-to-center distance): 24 mm
+
+Before surface mounting, make sure that the color of the 30% circle on the HUMIDITY
+INDICATOR is blue (see Figure 5-4). If the color of the 20% circle is pink and the color of
+the 30% circle is lavender (see Figure 5-5), you must bake the module until it turns to
+blue.
+
+Figure 5-4 Normal Humidity Indication
+
+Figure 5-5 Abnormal Humidity Indication
+
+The UM982 is rated at MSL level 3. Please refer to the IPC/JEDEC J-STD-033 standards
+for the package and operation requirements. You may access to the website
+
+www.jedec.org to get more information.
+The shelf life of the UM982 module packaged in vacuum-sealed aluminum foil antistatic
+bags is one year.
+
+20
+
+Packaging
+
+UC-00-M31 EN R1.3
+
+和芯星通科技（北京）有限公司
+Unicore Communications, Inc.
+北京市海淀区丰贤东路 7 号北斗星通大厦三层
+F3, No.7, Fengxian East Road, Haidian, Beijing, P.R.China,
+
+100094
+www.unicorecomm.com
+Phone: 86-10-69939800
+Fax: 86-10-69939888
+info@unicorecomm.com
+
+www.unicorecomm.com
+
+

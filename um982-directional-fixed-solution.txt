@@ -1,0 +1,32 @@
+UM982 configuration directional
+fixed solution
+1. Download the software package and
+unzip it
+https://drive.google.com/file/d/1t3oI-u2BrwX-pxNWZKlldx9PkmUlmeJA/view?usp=drive_link
+
+2. Setup steps
+2.1. Test Preparation
+Prepare a UM982 module, 2 antennas and connect to Upr ecise software
+
+1
+
+UM982 configuration directional fixed solution
+manual V 24 - 1224 | www.wit-motion.com | support@wit-motion.com
+
+2.2. Configure the mode
+
+2.3. Perform directional configuration
+
+2
+
+UM982 configuration directional fixed solution
+manual V 24 - 1224 | www.wit-motion.com | support@wit-motion.com
+
+2.4. Sending AGRICA 1
+
+3
+
+UM982 configuration directional fixed solution
+manual V 24 - 1224 | www.wit-motion.com | support@wit-motion.com
+
+

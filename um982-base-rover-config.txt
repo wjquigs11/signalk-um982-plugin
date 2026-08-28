@@ -1,0 +1,59 @@
+Two RTK- 982s are configured as a base
+station and a rover.
+1. Hardware Connection
+Note: The test needs to be carried out in an open area outdoors.
+
+1.1 : Two 982 modules
+1.2 : Two dual-band antennas or full-band antennas
+
+Note: TX2 and RX2 here correspond to each other. TX2 is a fixed base station, RX2
+is a mobile station. TXD and RXD depend on which serial port you configured by
+sending commands in step 3.2.1. If you configured com2, you need to connect the
+base station serial port of TX2 to the mobile station of RX2 , as shown in the
+figure:
+
+2. Software Configuration
+After connecting the two modules, the port in the device manager will generate two
+com ports. Pay attention to distinguish the corresponding com ports when
+
+configuring the base station and mobile
+station.
+
+2.1Double click to open the UPrecise.exe software
+
+2.2Configure fixed base stations
+Here com15 is a fixed base station.
+Select the serial port number and baud rate to open it. After the latitude and
+longitude data comes out, disconnect.
+
+2.2.1 Open the serial port assistant tool
+After opening the serial port assistant, select the port number corresponding to
+the RTK982 module that needs to be configured as a base station . My fixed base
+station configuration here is com15. Send the following 8 commands in sequence:
+mode base time 60
+rtcm1006 com2 10
+rtcm1033 com2 10
+rtom1074 com2 1
+rtcm1124 com2 1
+rtcm1084 com2 1
+rtcm1094 com2 1
+saveconfig
+
+2.3 Configure the mobile station
+2.3.1 Open the UPrecise software again, and then select the com port
+corresponding to the RTK-982 that needs to be set as the mobile station to
+connect. Here I use com11, and then go to the arrow position in the figure below
+to set the mobile station working mode, and click Send. Then wait for the
+difference.
+
+4. Check the differential positioning connection status
+When the positioning type of the red frame position in the figure below is RTK
+Fixed, it means that the fixed solution has been entered, and the positioning
+accuracy is at the centimeter level. For other statement parsing, please refer to
+the protocol.
+Wait for the status type to change. When RTK Fixed appears, the connection is
+successful.
+
+This discrete trajectory tracking can reflect centimeter-level positioning.
+
+

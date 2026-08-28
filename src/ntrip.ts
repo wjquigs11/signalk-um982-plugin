@@ -8,14 +8,14 @@ export interface NtripOptions {
   port: number;
   mountpoint: string;
   username: string;
-  password: string;
+  password?: string;
   xyz: [number, number, number];
   interval: number;
 }
 
 export const NtripOptionsSchema = {
   type: "object",
-  required: ["host", "port", "mountpoint", "username", "password", "latitude", "longitude", "interval"],
+  required: ["host", "port", "mountpoint", "username", "latitude", "longitude", "interval"],
   properties: {
     host: {
       type: "string",
@@ -75,12 +75,26 @@ export const startRTCM = (params: NtripConfig): (() => void) => {
   const { options, onData, onStationData, onClose, onError } = params;
   const options_: NtripOptions = {
     xyz: latLonToECEF(options.latitude, options.longitude, 0),
+    password: '',
     ...options
   };
 
+  console.log('NTRIP: connecting to', options_.host + ':' + options_.port, 'mountpoint:', options_.mountpoint, 'username:', options_.username, 'interval:', options_.interval + 'ms');
+  console.log('NTRIP: position for GGA:', options.latitude, options.longitude, '-> ECEF:', options_.xyz);
+
   const client = new NtripClient(options_);
 
+  let dataCount = 0;
+  let lastDataLog = 0;
+
   client.on('data', (data: Buffer) => {
+    dataCount++;
+    const now = Date.now();
+    if (now - lastDataLog >= 10000) {
+      console.log('NTRIP: receiving data, packets since last log:', dataCount, 'latest size:', data.length, 'bytes');
+      dataCount = 0;
+      lastDataLog = now;
+    }
     onData(data);
     try {
       const [message, length] = RtcmTransport.decode(data);
@@ -90,21 +104,26 @@ export const startRTCM = (params: NtripConfig): (() => void) => {
     }
   });
 
+  client.on('response', (res: any) => {
+    console.log('NTRIP: server response status:', res.statusCode, res.statusMessage || '');
+  });
+
   client.on('close', () => {
-    console.log('NTRIP client closed');
+    console.log('NTRIP: connection closed');
     onClose();
   });
 
   client.on('error', (err: any) => {
-    console.log('NTRIP client error:', err);
+    console.log('NTRIP: connection error:', err.message || err);
     onError(err);
   });
 
+  console.log('NTRIP: starting client...');
   client.run();
 
   // Return cleanup function
   return () => {
-    console.log('Closing NTRIP client...');
+    console.log('NTRIP: shutting down client...');
     if (client && typeof client.close === 'function') {
       client.close();
     } else if (client && typeof client.destroy === 'function') {

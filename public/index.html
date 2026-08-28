@@ -657,6 +657,7 @@
     let headingArrow = null; // Feature for heading arrow
     let currentHeading = null; // Current heading in radians
     let headingTrue = null; // True heading in degrees
+    let headingPath = "navigation.RTKheadingTrue"; // Signal K path the plugin publishes RTK heading to
     let baselineLength = null; // RTK baseline length in meters
     let positionType = null; // RTK position type string
     let methodQuality = null; // GNSS method quality string
@@ -1829,7 +1830,7 @@
                 minPeriod: 500,
               },
               {
-                path: "navigation.headingTrue",
+                path: headingPath,
                 period: 1000,
                 minPeriod: 500,
               },
@@ -1922,13 +1923,20 @@
                     }
                   }
                 } else if (
-                  value.path === "navigation.headingTrue" &&
+                  value.path === headingPath &&
                   value.value !== undefined
                 ) {
-                  // Heading is in radians
-                  currentHeading = value.value;
-                  headingTrue = (value.value * 180) / Math.PI; // Convert to degrees
-                  addHeadingToHistory(headingTrue, positionType);
+                  if (value.value === null) {
+                    // RTK sensor has no heading solution (e.g. GNSS-only fix).
+                    // Clear the heading so we don't show a stale or 0 value.
+                    currentHeading = null;
+                    headingTrue = null;
+                  } else {
+                    // Heading is in radians
+                    currentHeading = value.value;
+                    headingTrue = (value.value * 180) / Math.PI; // Convert to degrees
+                    addHeadingToHistory(headingTrue, positionType);
+                  }
                   updateHeadingArrow();
                   updateHeadingTrueDisplay();
                 } else if (
@@ -2190,11 +2198,16 @@
     }
 
     function updateHeadingArrow() {
-      if (
-        !headingArrow ||
-        headingTrue === null ||
-        headingTrue === undefined
-      ) {
+      if (!headingArrow) {
+        return;
+      }
+
+      if (headingTrue === null || headingTrue === undefined) {
+        // No heading solution: collapse the arrow so no stale direction is shown.
+        const geometry = headingArrow.getGeometry();
+        if (geometry) {
+          geometry.setCoordinates([]);
+        }
         return;
       }
 
@@ -2633,7 +2646,21 @@
     startCleanupTimer();
     updatePolarChartTitle();
 
-    connectWebSocket();
+    // Load the configured heading path from the plugin before connecting,
+    // so we subscribe to the same path the plugin publishes RTK heading to.
+    fetch(`${pluginBaseUrl}/heading-path`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data && data.path) {
+          headingPath = data.path;
+        }
+      })
+      .catch(() => {
+        /* keep default headingPath */
+      })
+      .finally(() => {
+        connectWebSocket();
+      });
   </script>
 </body>
 
